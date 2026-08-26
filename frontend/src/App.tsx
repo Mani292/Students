@@ -3,32 +3,33 @@ import { AuthView } from './views/AuthView';
 import { StudentPortal } from './views/StudentPortal';
 import { FacultyDashboard } from './views/FacultyDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
+import type { SessionUser } from './api';
 
 export const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<{ email: string; role: string } | null>(null);
+  const [session, setSession] = useState<{ token: string; user: SessionUser } | null>(null);
 
-  const handleLogin = (email: string, role: string) => {
-    setCurrentUser({ email, role });
+  const handleLogin = (nextSession: { token: string; user: SessionUser }) => {
+    setSession(nextSession);
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
+    setSession(null);
   };
 
-  if (!currentUser) {
+  if (!session) {
     return <AuthView onLogin={handleLogin} />;
   }
 
-  if (currentUser.role === 'STUDENT') {
-    return <StudentPortal userEmail={currentUser.email} onLogout={handleLogout} />;
+  if (session.user.role === 'STUDENT') {
+    return <StudentPortal userEmail={session.user.email} token={session.token} onLogout={handleLogout} />;
   }
 
-  if (currentUser.role === 'FACULTY') {
-    return <FacultyDashboard userEmail={currentUser.email} onLogout={handleLogout} />;
+  if (session.user.role === 'FACULTY') {
+    return <FacultyDashboard userEmail={session.user.email} token={session.token} onLogout={handleLogout} />;
   }
 
-  if (currentUser.role === 'ADMIN') {
-    return <AdminDashboard userEmail={currentUser.email} onLogout={handleLogout} />;
+  if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' || session.user.role === 'HOD') {
+    return <AdminDashboard userEmail={session.user.email} onLogout={handleLogout} />;
   }
 
   return <AuthView onLogin={handleLogin} />;

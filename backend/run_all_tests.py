@@ -1,14 +1,16 @@
 import os
 import sys
+from pathlib import Path
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-# Remove test db if exists
-if os.path.exists("smart_university.db"):
-    try:
-        os.remove("smart_university.db")
-    except Exception:
-        pass
+# Keep the suite isolated from the development database and any running server.
+test_db = Path(__file__).resolve().parent / "test_suite.db"
+os.environ["DATABASE_URL"] = f"sqlite:///{test_db}"
+try:
+    test_db.unlink()
+except FileNotFoundError:
+    pass
 
 import test_models
 import test_security

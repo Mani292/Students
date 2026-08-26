@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button, Badge, StatCard } from '../components/UIComponents';
+import { applyPermission, createService, getDigitalId, getMyPermissions, getMyServices, sendAIMessage, type PermissionRequest, type ServiceRequest } from '../api';
 import {
-  LayoutDashboard, QrCode, FileText, Award, Bot, BookOpen, Briefcase, Code, User, LogOut, CheckCircle, Send
+  LayoutDashboard, FileText, Award, Bot, BookOpen, Briefcase, Code, User, LogOut, Send
 } from 'lucide-react';
 
 interface StudentPortalProps {
   userEmail: string;
+  token: string;
   onLogout: () => void;
 }
 
-export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'permissions' | 'services' | 'digital_id' | 'copilot' | 'learning' | 'career' | 'project_lab'>('overview');
+export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, onLogout }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'services' | 'digital_id' | 'copilot' | 'learning' | 'career' | 'project_lab'>('overview');
 
   // Interactive AI Assistant State
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; tools?: string[] }>>([
@@ -18,9 +20,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
   ]);
   const [chatInput, setChatInput] = useState('');
 
-  // Attendance QR State
-  const [totpInput, setTotpInput] = useState('');
-  const [attendanceSuccess, setAttendanceSuccess] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   // Leave Form State
   const [leaveReason, setLeaveReason] = useState('');
@@ -29,44 +29,57 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
   // Service Request State
   const [serviceType, setServiceType] = useState('BONAFIDE');
   const [serviceSubmitted, setServiceSubmitted] = useState(false);
+  const [permissions, setPermissions] = useState<PermissionRequest[]>([]);
+  const [services, setServices] = useState<ServiceRequest[]>([]);
+  const [digitalId, setDigitalId] = useState<Record<string, string | number> | null>(null);
 
   // Project Lab State
   const [projectIdea, setProjectIdea] = useState('AI Traffic Management');
   const [projectOutput, setProjectOutput] = useState<any>(null);
 
-  const handleSendMessage = () => {
+  useEffect(() => {
+    Promise.all([getMyPermissions(token), getMyServices(token), getDigitalId(token)])
+      .then(([permissionData, serviceData, idData]) => {
+        setPermissions(permissionData);
+        setServices(serviceData);
+        setDigitalId(idData);
+      })
+      .catch(error => setRequestError(error instanceof Error ? error.message : 'Unable to load student data'));
+  }, [token]);
+
+  const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
     const userMsg = chatInput;
     setMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setChatInput('');
-
-    setTimeout(() => {
-      let reply = "I can assist you with university guidelines, course materials, or your student profile.";
-      let tools = ["search_university_knowledge_tool"];
-      if (userMsg.toLowerCase().includes("attendance")) {
-        reply = "Your current attendance is 87.5% across 24 conducted classes. No shortage alert.";
-        tools = ["get_attendance_summary_tool"];
-      } else if (userMsg.toLowerCase().includes("permission") || userMsg.toLowerCase().includes("leave")) {
-        reply = "You have 1 pending Medical Leave request currently awaiting Faculty review.";
-        tools = ["get_permission_status_tool"];
-      } else if (userMsg.toLowerCase().includes("policy")) {
-        reply = "University policy requires a minimum of 75% attendance for end-semester exam eligibility.";
-        tools = ["search_university_knowledge_tool"];
-      }
-      setMessages(prev => [...prev, { sender: 'ai', text: reply, tools }]);
-    }, 500);
+    try {
+      const result = await sendAIMessage(token, userMsg);
+      setMessages(prev => [...prev, { sender: 'ai', text: result.response, tools: result.tools_used }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { sender: 'ai', text: error instanceof Error ? error.message : 'AI request failed' }]);
+    }
   };
 
-  const handleRecordAttendance = () => {
-    if (!totpInput) return;
-    setAttendanceSuccess("Attendance Recorded Successfully! Status: PRESENT");
-    setTimeout(() => setAttendanceSuccess(null), 4000);
-  };
-
-  const handleApplyLeave = (e: React.FormEvent) => {
+  const handleApplyLeave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLeaveSubmitted(true);
-    setTimeout(() => setLeaveSubmitted(false), 4000);
+    try {
+      const permission = await applyPermission(token, leaveReason);
+      setPermissions(prev => [permission, ...prev]);
+      setLeaveReason('');
+      setLeaveSubmitted(true);
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Permission request failed');
+    }
+  };
+
+  const handleCreateService = async () => {
+    try {
+      const service = await createService(token, serviceType);
+      setServices(prev => [service, ...prev]);
+      setServiceSubmitted(true);
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Service request failed');
+    }
   };
 
   const handleGenerateProject = () => {
@@ -92,7 +105,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
           </div>
           <div>
             <h1 className="text-base font-bold">Smart Student Portal</h1>
-            <p className="text-xs text-slate-400">{userEmail} • Roll: STU2025001</p>
+            <p className="text-xs text-slate-400">{userEmail} • Authenticated student</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
@@ -109,7 +122,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
         <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-1 hidden md:block">
           {[
             { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-            { id: 'attendance', label: 'Smart Attendance', icon: QrCode },
             { id: 'permissions', label: 'Permissions & Leave', icon: FileText },
             { id: 'services', label: 'Service Center', icon: Award },
             { id: 'digital_id', label: 'Digital Student ID', icon: User },
@@ -136,12 +148,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
 
         {/* Content View */}
         <main className="flex-1 p-6 overflow-y-auto">
+          {requestError && (
+            <div role="alert" className="mb-6 p-3 bg-rose-50 text-rose-800 border border-rose-200 rounded-lg text-sm">
+              {requestError}
+            </div>
+          )}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="Overall Attendance" value="87.5%" change="+2.1% this month" icon={<QrCode className="h-6 w-6" />} />
                 <StatCard label="Current CGPA" value="3.84" change="Top 5% in Department" icon={<Award className="h-6 w-6" />} />
-                <StatCard label="Pending Requests" value="1 Leave" change="Faculty Review" icon={<FileText className="h-6 w-6" />} />
+                <StatCard label="Pending Requests" value={`${permissions.filter(request => request.status !== 'APPROVED' && request.status !== 'REJECTED').length} Leave`} change="Live from API" icon={<FileText className="h-6 w-6" />} />
                 <StatCard label="Active AI Roadmap" value="Python ML" change="Step 3 of 4" icon={<BookOpen className="h-6 w-6" />} />
               </div>
 
@@ -181,38 +197,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
             </div>
           )}
 
-          {activeTab === 'attendance' && (
-            <div className="space-y-6 max-w-2xl">
-              <Card title="Smart Dynamic Anti-Proxy Attendance Launcher">
-                <p className="text-sm text-slate-600 mb-4">Enter the 6-digit dynamic TOTP code displayed on the faculty class screen to record your attendance.</p>
-
-                {attendanceSuccess && (
-                  <div className="mb-4 p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-sm flex items-center">
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    {attendanceSuccess}
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Dynamic 6-Digit TOTP Code</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="e.g. 4A9F21"
-                      value={totpInput}
-                      onChange={(e) => setTotpInput(e.target.value.toUpperCase())}
-                      className="mt-1 block w-full px-4 py-3 border border-slate-300 rounded-lg text-lg font-mono tracking-widest text-center"
-                    />
-                  </div>
-                  <Button variant="primary" className="w-full" onClick={handleRecordAttendance}>
-                    Submit Attendance Verification
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          )}
-
           {activeTab === 'permissions' && (
             <div className="space-y-6 max-w-2xl">
               <Card title="Apply for Leave / Permission">
@@ -237,6 +221,15 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
                     Submit Request
                   </Button>
                 </form>
+                <div className="mt-6 space-y-2">
+                  {permissions.length === 0 && <p className="text-sm text-slate-500">No permission requests yet.</p>}
+                  {permissions.map(permission => (
+                    <div key={permission.id} className="p-3 border border-slate-200 rounded-lg flex items-center justify-between text-sm">
+                      <span>{permission.reason}</span>
+                      <Badge variant={permission.status === 'APPROVED' ? 'success' : 'warning'}>{permission.status}</Badge>
+                    </div>
+                  ))}
+                </div>
               </Card>
             </div>
           )}
@@ -263,9 +256,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
                       <option value="TRANSPORT">Transport Bus Pass</option>
                     </select>
                   </div>
-                  <Button variant="primary" className="w-full" onClick={() => { setServiceSubmitted(true); setTimeout(() => setServiceSubmitted(false), 4000); }}>
+                  <Button variant="primary" className="w-full" onClick={handleCreateService}>
                     Issue Request
                   </Button>
+                </div>
+                <div className="mt-6 space-y-2">
+                  {services.length === 0 && <p className="text-sm text-slate-500">No service requests yet.</p>}
+                  {services.map(service => (
+                    <div key={service.id} className="p-3 border border-slate-200 rounded-lg flex items-center justify-between text-sm">
+                      <span>{service.service_type}</span>
+                      <Badge variant="info">{service.status}</Badge>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -280,19 +282,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, onLogou
                 </div>
                 <div className="mt-6 flex items-center space-x-4">
                   <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center text-2xl font-bold text-white border-2 border-sky-400">
-                    JD
+                    {String(digitalId?.full_name ?? userEmail).slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold">John Doe</h3>
-                    <p className="text-xs text-slate-300">Roll: STU2025001</p>
-                    <p className="text-xs text-slate-400">Dept: Computer Science & Eng</p>
+                    <h3 className="text-lg font-bold">{digitalId?.full_name ?? 'Loading student ID...'}</h3>
+                    <p className="text-xs text-slate-300">Roll: {digitalId?.roll_number ?? '...'}</p>
+                    <p className="text-xs text-slate-400">Dept: {digitalId?.department_name ?? '...'}</p>
                   </div>
                 </div>
                 <div className="mt-6 bg-white p-4 rounded-xl text-slate-900 flex flex-col items-center justify-center">
                   <div className="w-32 h-32 bg-slate-100 border border-slate-300 flex items-center justify-center text-xs font-mono text-center p-2 rounded-lg">
-                    [ Encrypted Token QR Code ]
+                    {digitalId?.verification_token ? 'Signed verification token available' : 'Loading signed token...'}
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-2 font-mono">Token: eyJhbGciOiJIUzI1Ni... (Scannable)</p>
+                  <p className="text-[10px] text-slate-500 mt-2 font-mono break-all">{digitalId?.verification_token ?? 'Token unavailable'}</p>
                 </div>
               </Card>
             </div>

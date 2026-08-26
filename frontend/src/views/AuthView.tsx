@@ -1,19 +1,31 @@
 import React, { useState } from 'react';
 import { Button, Card } from '../components/UIComponents';
 import { GraduationCap, ShieldCheck, UserCheck, Lock } from 'lucide-react';
+import { login, type SessionUser } from '../api';
 
 interface AuthViewProps {
-  onLogin: (email: string, role: string) => void;
+  onLogin: (session: { token: string; user: SessionUser }) => void;
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('student@univ.edu');
   const [password, setPassword] = useState('password123');
   const [role, setRole] = useState<'STUDENT' | 'FACULTY' | 'ADMIN'>('STUDENT');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, role);
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const session = await login(email, password);
+      onLogin(session);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,8 +99,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
               />
             </div>
 
-            <Button type="submit" variant="primary" size="lg" className="w-full">
-              Sign In to Ecosystem
+            {error && <p role="alert" className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3">{error}</p>}
+
+            <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in...' : 'Sign In to Ecosystem'}
             </Button>
           </form>
         </Card>

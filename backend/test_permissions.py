@@ -70,27 +70,40 @@ def test_permissions_api():
     )
     assert res.status_code == 200, res.text
     perm_id = res.json()["id"]
-    assert res.json()["status"] == "PENDING"
+    assert res.json()["status"] == "HOD_REVIEW"
     assert res.json()["student_roll_number"] == "MECHPERM001"
     assert res.json()["student_name"] == "Bob Mechanic"
 
-    # 2. Faculty reviews and approves (escalating to HOD_REVIEW)
-    res = client.post(
-        f"/api/v1/permissions/{perm_id}/action",
-        json={"action": "APPROVE", "comments": "Medical certificate verified"},
+    # 2. Faculty sees no pending request before HOD approval
+    res = client.get(
+        "/api/v1/permissions/pending",
         headers={"Authorization": f"Bearer {fac_token}"}
     )
     assert res.status_code == 200, res.text
-    assert res.json()["status"] == "HOD_REVIEW"
+    assert all(item["id"] != perm_id for item in res.json())
 
-    # 3. HOD approves final request
+    # 3. HOD approves the request first
     res = client.post(
         f"/api/v1/permissions/{perm_id}/action",
-        json={"action": "APPROVE", "comments": "Final approval granted"},
+        json={"action": "APPROVE", "comments": "Medical certificate verified"},
         headers={"Authorization": f"Bearer {hod_token}"}
     )
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "APPROVED"
+
+    # 4. Faculty can see the approved request and roll number for attendance
+    res = client.post(
+        f"/api/v1/permissions/{perm_id}/action",
+        json={"action": "APPROVE"},
+        headers={"Authorization": f"Bearer {fac_token}"}
+    )
+    assert res.status_code == 403, res.text
+    res = client.get(
+        "/api/v1/permissions/pending",
+        headers={"Authorization": f"Bearer {fac_token}"}
+    )
+    assert res.status_code == 200, res.text
+    assert any(item["id"] == perm_id and item["student_roll_number"] == "MECHPERM001" for item in res.json())
 
     print("Multi-Tier Permission & Leave Management Workflow API test PASSED.")
 

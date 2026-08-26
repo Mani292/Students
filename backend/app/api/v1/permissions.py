@@ -44,19 +44,19 @@ def apply_permission(
         start_date=req.start_date,
         end_date=req.end_date,
         proof_url=req.proof_url,
-        status=PermissionStatus.PENDING
+        status=PermissionStatus.HOD_REVIEW
     )
     db.add(permission)
     db.commit()
     db.refresh(permission)
 
-    # Notify faculty members with Roll Number for attendance marking
-    faculty_users = db.query(User).filter(User.role.in_([UserRole.FACULTY, UserRole.HOD])).all()
-    for f in faculty_users:
+    # HOD reviews first; faculty receives the roll number only after approval.
+    hod_users = db.query(User).filter(User.role == UserRole.HOD).all()
+    for f in hod_users:
         notif = Notification(
             user_id=f.id,
-            title=f"Leave Request: Roll No {student.roll_number}",
-            message=f"Student {current_user.full_name} (Roll No: {student.roll_number}) submitted leave request for {req.reason}. Update attendance roll records accordingly.",
+            title="Permission request requires HOD review",
+            message=f"Student {current_user.full_name} submitted a permission request for {req.reason}.",
             category="PERMISSION",
             priority=NotificationPriority.ACTION_REQUIRED
         )
@@ -83,9 +83,9 @@ def get_pending_permissions(
     current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN, UserRole.SUPER_ADMIN]))
 ):
     if current_user.role == UserRole.FACULTY:
-        perms = db.query(PermissionRequest).filter(PermissionRequest.status.in_([PermissionStatus.PENDING, PermissionStatus.FACULTY_REVIEW])).all()
+        perms = db.query(PermissionRequest).filter(PermissionRequest.status == PermissionStatus.APPROVED).all()
     elif current_user.role == UserRole.HOD:
-        perms = db.query(PermissionRequest).filter(PermissionRequest.status.in_([PermissionStatus.FACULTY_REVIEW, PermissionStatus.HOD_REVIEW])).all()
+        perms = db.query(PermissionRequest).filter(PermissionRequest.status == PermissionStatus.HOD_REVIEW).all()
     else:
         perms = db.query(PermissionRequest).filter(PermissionRequest.status != PermissionStatus.APPROVED).all()
     return [_build_permission_out(p, db) for p in perms]
@@ -100,17 +100,27 @@ def update_permission_status(
     permission = db.query(PermissionRequest).filter(PermissionRequest.id == permission_id).first()
     if not permission:
         raise HTTPException(status_code=404, detail="Permission request not found")
+    student = db.query(Student).filter(Student.id == permission.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found")
 
     if req.action == "APPROVE":
         if current_user.role == UserRole.FACULTY:
-            # Multi-tier escalation: Faculty -> HOD Review
-            permission.status = PermissionStatus.HOD_REVIEW
-        else:
-            permission.status = PermissionStatus.APPROVED
+            raise HTTPException(status_code=403, detail="Faculty review is available after HOD approval")
+        permission.status = PermissionStatus.APPROVED
+        faculty_users = db.query(User).filter(User.role == UserRole.FACULTY).all()
+        for faculty_user in faculty_users:
+            db.add(Notification(
+                user_id=faculty_user.id,
+                title=f"Approved permission: Roll No {student.roll_number}",
+                message=f"HOD approved permission for student roll number {student.roll_number}. Update attendance records as needed.",
+                category="PERMISSION",
+                priority=NotificationPriority.ACTION_REQUIRED,
+            ))
     elif req.action == "REJECT":
         permission.status = PermissionStatus.REJECTED
     elif req.action == "FORWARD":
-        permission.status = PermissionStatus.HOD_REVIEW
+        raise HTTPException(status_code=400, detail="Requests are submitted directly to HOD review")
 
     if req.comments:
         existing_comments = permission.comments or ""
