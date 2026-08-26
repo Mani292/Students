@@ -14,13 +14,10 @@ class ServiceProcessRequest(BaseModel):
 class ServiceOut(BaseModel):
     id: int
     student_id: int
-    student_name: Optional[str] = None
-    roll_number: Optional[str] = None
     service_type: ServiceType
     details: Dict[str, Any]
     status: ServiceRequestStatus
-    issued_document_url: Optional[str] = None
-    verification_token: Optional[str] = None
+    issued_document_url: Optional[str]
     created_at: datetime
 
     class Config:
@@ -32,10 +29,7 @@ class DigitalIDOut(BaseModel):
     department_name: str
     year: int
     semester: int
-    email: str
-    cgpa: float
     verification_token: str
-    qr_data: str
 
 class DigitalIDVerificationOut(BaseModel):
     valid: bool
@@ -44,4 +38,3 @@ class DigitalIDVerificationOut(BaseModel):
     department: str
     year: int
     status: str
-    issued_at: Optional[datetime] = None
