@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Button, Badge, StatCard } from '../components/UIComponents';
-import { applyPermission, createService, getDigitalId, getMyPermissions, getMyServices, sendAIMessage, type PermissionRequest, type ServiceRequest } from '../api';
+import { applyPermission, createService, generateLearningPath, generateProjectMentor, getAcademicProfile, getJobs, getMyPermissions, getMyServices, getNotifications, markNotificationRead, matchJob, sendAIMessage, type AcademicProfile, type Job, type JobMatch, type LearningPath, type Notification, type PermissionRequest, type ServiceRequest } from '../api';
 import {
   LayoutDashboard, FileText, Award, Bot, BookOpen, Briefcase, Code, User, LogOut, Send
 } from 'lucide-react';
@@ -12,7 +12,7 @@ interface StudentPortalProps {
 }
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'services' | 'digital_id' | 'copilot' | 'learning' | 'career' | 'project_lab'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'services' | 'copilot' | 'learning' | 'career' | 'project_lab'>('overview');
 
   // Interactive AI Assistant State
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; tools?: string[] }>>([
@@ -31,20 +31,28 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
   const [serviceSubmitted, setServiceSubmitted] = useState(false);
   const [permissions, setPermissions] = useState<PermissionRequest[]>([]);
   const [services, setServices] = useState<ServiceRequest[]>([]);
-  const [digitalId, setDigitalId] = useState<Record<string, string | number> | null>(null);
+  const [profile, setProfile] = useState<AcademicProfile | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Project Lab State
   const [projectIdea, setProjectIdea] = useState('AI Traffic Management');
   const [projectOutput, setProjectOutput] = useState<any>(null);
+  const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
+  const [learningSubject, setLearningSubject] = useState('Machine Learning');
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobMatch, setJobMatch] = useState<JobMatch | null>(null);
+  const [projectLoading, setProjectLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([getMyPermissions(token), getMyServices(token), getDigitalId(token)])
-      .then(([permissionData, serviceData, idData]) => {
+    Promise.all([getMyPermissions(token), getMyServices(token), getAcademicProfile(token), getNotifications(token)])
+      .then(([permissionData, serviceData, profileData, notificationData]) => {
         setPermissions(permissionData);
         setServices(serviceData);
-        setDigitalId(idData);
+        setProfile(profileData);
+        setNotifications(notificationData);
       })
       .catch(error => setRequestError(error instanceof Error ? error.message : 'Unable to load student data'));
+    getJobs().then(setJobs).catch(() => setRequestError('Unable to load career opportunities'));
   }, [token]);
 
   const handleSendMessage = async () => {
@@ -82,17 +90,31 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
     }
   };
 
-  const handleGenerateProject = () => {
-    setProjectOutput({
-      problem: `Automating and optimizing real-time data handling for ${projectIdea}.`,
-      architecture: "Decoupled React Frontend + FastAPI Backend + PostgreSQL DB",
-      milestones: [
-        "Week 1: Requirements Gathering & Schema Design",
-        "Week 2: Core Microservice Development",
-        "Week 3: AI Integration & Testing",
-        "Week 4: Final Documentation & Presentation"
-      ]
-    });
+  const handleGenerateProject = async () => {
+    setProjectLoading(true);
+    try {
+      setProjectOutput(await generateProjectMentor(token, projectIdea));
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Project mentor request failed');
+    } finally {
+      setProjectLoading(false);
+    }
+  };
+
+  const handleGenerateLearning = async () => {
+    try {
+      setLearningPath(await generateLearningPath(token, learningSubject, 'Software Engineer'));
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Learning path request failed');
+    }
+  };
+
+  const handleMatchJob = async (job: Job) => {
+    try {
+      setJobMatch(await matchJob(`${job.title} ${job.required_skills.join(' ')}`, profile?.skills ?? []));
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Job matching failed');
+    }
   };
 
   return (
@@ -124,7 +146,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
             { id: 'overview', label: 'Overview', icon: LayoutDashboard },
             { id: 'permissions', label: 'Permissions & Leave', icon: FileText },
             { id: 'services', label: 'Service Center', icon: Award },
-            { id: 'digital_id', label: 'Digital Student ID', icon: User },
             { id: 'copilot', label: 'AI Copilot Chat', icon: Bot },
             { id: 'learning', label: 'AI Learning Hub', icon: BookOpen },
             { id: 'career', label: 'Career & Matching', icon: Briefcase },
@@ -156,7 +177,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="Current CGPA" value="3.84" change="Top 5% in Department" icon={<Award className="h-6 w-6" />} />
+                <StatCard label="Current CGPA" value={profile?.cgpa ?? '...'} change={profile?.department ?? 'Live from API'} icon={<Award className="h-6 w-6" />} />
                 <StatCard label="Pending Requests" value={`${permissions.filter(request => request.status !== 'APPROVED' && request.status !== 'REJECTED').length} Leave`} change="Live from API" icon={<FileText className="h-6 w-6" />} />
                 <StatCard label="Active AI Roadmap" value="Python ML" change="Step 3 of 4" icon={<BookOpen className="h-6 w-6" />} />
               </div>
@@ -193,6 +214,20 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
                     </div>
                   </div>
                 </Card>
+
+                <Card title="Notifications">
+                  <div className="space-y-3">
+                    {notifications.length === 0 && <p className="text-sm text-slate-500">No notifications.</p>}
+                    {notifications.slice(0, 5).map(notification => (
+                      <div key={notification.id} className={`p-3 rounded-lg border ${notification.is_read ? 'border-slate-200 bg-slate-50' : 'border-sky-200 bg-sky-50'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div><p className="font-semibold text-sm text-slate-900">{notification.title}</p><p className="text-xs text-slate-600 mt-1">{notification.message}</p></div>
+                          {!notification.is_read && <button className="text-xs text-sky-700 whitespace-nowrap" onClick={() => markNotificationRead(token, notification.id).then(updated => setNotifications(prev => prev.map(item => item.id === updated.id ? updated : item)))}>Mark read</button>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
               </div>
             </div>
           )}
@@ -202,7 +237,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
               <Card title="Apply for Leave / Permission">
                 {leaveSubmitted && (
                   <div className="mb-4 p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-sm">
-                    Leave Request Submitted! Workflow status set to: PENDING (FACULTY_REVIEW)
+                    Leave request submitted to HOD review.
                   </div>
                 )}
                 <form onSubmit={handleApplyLeave} className="space-y-4">
@@ -273,33 +308,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
             </div>
           )}
 
-          {activeTab === 'digital_id' && (
-            <div className="space-y-6 max-w-md mx-auto">
-              <Card className="bg-gradient-to-br from-slate-900 to-sky-950 text-white border-none p-6 rounded-2xl shadow-xl">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-700">
-                  <span className="text-xs font-bold uppercase tracking-wider text-sky-400">Smart University Digital ID</span>
-                  <Badge variant="success">Verified</Badge>
-                </div>
-                <div className="mt-6 flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center text-2xl font-bold text-white border-2 border-sky-400">
-                    {String(digitalId?.full_name ?? userEmail).slice(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">{digitalId?.full_name ?? 'Loading student ID...'}</h3>
-                    <p className="text-xs text-slate-300">Roll: {digitalId?.roll_number ?? '...'}</p>
-                    <p className="text-xs text-slate-400">Dept: {digitalId?.department_name ?? '...'}</p>
-                  </div>
-                </div>
-                <div className="mt-6 bg-white p-4 rounded-xl text-slate-900 flex flex-col items-center justify-center">
-                  <div className="w-32 h-32 bg-slate-100 border border-slate-300 flex items-center justify-center text-xs font-mono text-center p-2 rounded-lg">
-                    {digitalId?.verification_token ? 'Signed verification token available' : 'Loading signed token...'}
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-2 font-mono break-all">{digitalId?.verification_token ?? 'Token unavailable'}</p>
-                </div>
-              </Card>
-            </div>
-          )}
-
           {activeTab === 'copilot' && (
             <div className="h-[600px] flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 bg-slate-900 text-white font-bold flex items-center justify-between">
@@ -342,23 +350,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
           {activeTab === 'learning' && (
             <div className="space-y-6">
               <Card title="AI Personalized Learning Roadmap">
-                <p className="text-sm text-slate-600 mb-4">Target: Python & Machine Learning Engineer</p>
+                <div className="flex gap-3 mb-4">
+                  <input value={learningSubject} onChange={event => setLearningSubject(event.target.value)} className="flex-1 p-2.5 border border-slate-300 rounded-lg text-sm" />
+                  <Button onClick={handleGenerateLearning}>Generate roadmap</Button>
+                </div>
                 <div className="space-y-3">
-                  {[
-                    { step: 1, title: 'Programming Fundamentals', status: 'Completed' },
-                    { step: 2, title: 'Object-Oriented Programming & Data Structures', status: 'Completed' },
-                    { step: 3, title: 'NumPy, Pandas & Data Analysis', status: 'In Progress' },
-                    { step: 4, title: 'Machine Learning Models & Deployment', status: 'Upcoming' },
-                  ].map(s => (
-                    <div key={s.step} className="p-3 border rounded-lg flex items-center justify-between">
+                  {learningPath ? learningPath.roadmap.map(step => (
+                    <div key={step.step} className="p-3 border rounded-lg">
                       <div>
-                        <p className="font-semibold text-sm">Step {s.step}: {s.title}</p>
+                        <p className="font-semibold text-sm">Step {step.step}: {step.title}</p>
+                        <p className="text-xs text-slate-500 mt-1">{step.description}</p>
                       </div>
-                      <Badge variant={s.status === 'Completed' ? 'success' : s.status === 'In Progress' ? 'info' : 'neutral'}>
-                        {s.status}
-                      </Badge>
                     </div>
-                  ))}
+                  )) : <p className="text-sm text-slate-500">Generate a roadmap for a subject or skill.</p>}
                 </div>
               </Card>
             </div>
@@ -367,10 +371,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
           {activeTab === 'career' && (
             <div className="space-y-6">
               <Card title="AI Job Matching & Resume Optimizer">
-                <div className="p-4 bg-sky-50 text-sky-900 rounded-lg border border-sky-200 mb-4">
-                  <h4 className="font-bold text-sm">ATS Match Score: 85%</h4>
-                  <p className="text-xs mt-1">Matched Skills: Python, FastAPI, SQL | Missing: Docker, AWS</p>
+                {jobs.length === 0 && <p className="text-sm text-slate-500">No opportunities available.</p>}
+                <div className="space-y-3">
+                  {jobs.map(job => (
+                    <div key={job.id} className="p-4 border border-slate-200 rounded-lg flex items-center justify-between gap-4">
+                      <div><p className="font-semibold text-sm">{job.title}</p><p className="text-xs text-slate-500">{job.company} | {job.location}</p><p className="text-xs text-slate-500 mt-1">{job.required_skills.join(', ')}</p></div>
+                      <Button size="sm" onClick={() => handleMatchJob(job)}>Match my skills</Button>
+                    </div>
+                  ))}
                 </div>
+                {jobMatch && <div className="mt-4 p-4 bg-sky-50 text-sky-900 rounded-lg border border-sky-200"><h4 className="font-bold text-sm">Match score: {jobMatch.match_score}%</h4><p className="text-xs mt-1">Matched: {jobMatch.matching_skills.join(', ') || 'None'}</p><p className="text-xs mt-1">Missing: {jobMatch.missing_skills.join(', ') || 'None'}</p></div>}
               </Card>
             </div>
           )}
@@ -388,18 +398,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
                       className="mt-1 block w-full p-2.5 border border-slate-300 rounded-lg text-sm"
                     />
                   </div>
-                  <Button variant="primary" onClick={handleGenerateProject}>
-                    Generate SRS, DB Schema & Development Milestones
+                  <Button variant="primary" onClick={handleGenerateProject} disabled={projectLoading}>
+                    {projectLoading ? 'Generating...' : 'Generate SRS, DB Schema & Development Milestones'}
                   </Button>
 
                   {projectOutput && (
                     <div className="mt-4 p-4 bg-slate-50 border rounded-lg space-y-3 text-sm">
-                      <p><strong>Problem Statement:</strong> {projectOutput.problem}</p>
-                      <p><strong>Architecture:</strong> {projectOutput.architecture}</p>
+                      <p><strong>Problem Statement:</strong> {projectOutput.problem_statement}</p>
+                      <p><strong>Architecture:</strong> {projectOutput.architecture_overview}</p>
                       <div>
                         <strong>Milestones:</strong>
                         <ul className="list-disc pl-5 text-xs text-slate-600 mt-1">
-                          {projectOutput.milestones.map((m: string, i: number) => <li key={i}>{m}</li>)}
+                          {projectOutput.milestones.map((milestone: Record<string, unknown>, i: number) => <li key={i}>{Object.values(milestone).join(': ')}</li>)}
                         </ul>
                       </div>
                     </div>

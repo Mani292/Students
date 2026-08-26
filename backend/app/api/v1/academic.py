@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
-from app.models.all_models import Department, Course, ClassSession, Enrollment, UserRole, User
+from app.models.all_models import Department, Course, ClassSession, Enrollment, Student, UserRole, User
 from app.schemas.schemas import DepartmentCreate, DepartmentOut, CourseCreate, CourseOut, ClassSessionCreate, ClassSessionOut
 from app.core.rbac import require_roles, get_current_user
 
@@ -69,3 +69,22 @@ def create_class_session(
 @router.get("/classes", response_model=List[ClassSessionOut])
 def list_classes(db: Session = Depends(get_db)):
     return db.query(ClassSession).all()
+
+
+@router.get("/me")
+def get_my_academic_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.STUDENT])),
+):
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+    return {
+        "full_name": current_user.full_name,
+        "roll_number": student.roll_number,
+        "department": student.department.name if student.department else "N/A",
+        "year": student.year,
+        "semester": student.semester,
+        "cgpa": student.cgpa,
+        "skills": student.skills or [],
+    }

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Button, Card } from '../components/UIComponents';
 import { GraduationCap, ShieldCheck, UserCheck, Lock } from 'lucide-react';
-import { login, type SessionUser } from '../api';
+import { login, type Session } from '../api';
 
 interface AuthViewProps {
-  onLogin: (session: { token: string; user: SessionUser }) => void;
+  onLogin: (session: Session) => void;
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {

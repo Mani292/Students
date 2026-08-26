@@ -15,6 +15,12 @@ interface LoginResponse {
   email: string;
 }
 
+export interface Session {
+  token: string;
+  refreshToken: string;
+  user: SessionUser;
+}
+
 export interface PermissionRequest {
   id: number;
   student_id: number;
@@ -45,6 +51,73 @@ export interface AIChatResponse {
   tools_used: string[];
 }
 
+export interface AdminOverview {
+  total_students: number;
+  total_faculty: number;
+  attendance_percentage: number;
+  approved_services: number;
+  audit_events: number;
+  pending_permissions: number;
+  recent_audit_logs: Array<{
+    action: string;
+    resource: string;
+    timestamp: string;
+    actor_id?: number;
+    details: Record<string, unknown>;
+  }>;
+}
+
+export interface AcademicProfile {
+  full_name: string;
+  roll_number: string;
+  department: string;
+  year: number;
+  semester: number;
+  cgpa: number;
+  skills: string[];
+}
+
+export interface LearningPath {
+  subject: string;
+  roadmap: Array<{ step: number; title: string; description: string }>;
+  recommended_resources: Array<{ type: string; title: string; url: string }>;
+}
+
+export interface Job {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  required_skills: string[];
+}
+
+export interface JobMatch {
+  match_score: number;
+  matching_skills: string[];
+  missing_skills: string[];
+  recommendations: string[];
+}
+
+export interface ProjectMentorOutput {
+  problem_statement: string;
+  objectives: string[];
+  functional_requirements: string[];
+  architecture_overview: string;
+  suggested_tech_stack: string[];
+  milestones: Array<Record<string, unknown>>;
+}
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  title: string;
+  message: string;
+  category: string;
+  priority: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -63,13 +136,30 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   return response.json() as Promise<T>;
 }
 
-export async function login(email: string, password: string): Promise<{ token: string; user: SessionUser }> {
+export async function login(email: string, password: string): Promise<Session> {
   const session = await request<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
   const user = await request<SessionUser>('/auth/me', {}, session.access_token);
-  return { token: session.access_token, user };
+  return { token: session.access_token, refreshToken: session.refresh_token, user };
+}
+
+export async function refreshSession(refreshToken: string): Promise<Session> {
+  const session = await request<LoginResponse>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  const user = await request<SessionUser>('/auth/me', {}, session.access_token);
+  return { token: session.access_token, refreshToken: session.refresh_token, user };
+}
+
+export function getNotifications(token: string) {
+  return request<Notification[]>('/notifications/me', {}, token);
+}
+
+export function markNotificationRead(token: string, id: number) {
+  return request<Notification>(`/notifications/${id}/read`, { method: 'PATCH' }, token);
 }
 
 export function getMyPermissions(token: string) {
@@ -116,6 +206,39 @@ export function sendAIMessage(token: string, message: string) {
   return request<AIChatResponse>('/ai/chat', {
     method: 'POST',
     body: JSON.stringify({ message }),
+  }, token);
+}
+
+export function getAdminOverview(token: string) {
+  return request<AdminOverview>('/admin/overview', {}, token);
+}
+
+export function getAcademicProfile(token: string) {
+  return request<AcademicProfile>('/academic/me', {}, token);
+}
+
+export function generateLearningPath(token: string, subject: string, careerGoal: string) {
+  return request<LearningPath>('/ai/learning-path', {
+    method: 'POST',
+    body: JSON.stringify({ subject, career_goal: careerGoal }),
+  }, token);
+}
+
+export function getJobs() {
+  return request<Job[]>('/career-project/jobs');
+}
+
+export function matchJob(jobDescription: string, studentSkills: string[]) {
+  return request<JobMatch>('/career-project/match-job', {
+    method: 'POST',
+    body: JSON.stringify({ job_description: jobDescription, student_skills: studentSkills }),
+  });
+}
+
+export function generateProjectMentor(token: string, projectIdea: string) {
+  return request<ProjectMentorOutput>('/career-project/project-mentor', {
+    method: 'POST',
+    body: JSON.stringify({ project_idea: projectIdea }),
   }, token);
 }
 
