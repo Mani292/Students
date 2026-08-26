@@ -2,8 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
-from app.models.all_models import Department, Course, ClassSession, Enrollment, UserRole, User
-from app.schemas.schemas import DepartmentCreate, DepartmentOut, CourseCreate, CourseOut, ClassSessionCreate, ClassSessionOut
+from app.models.all_models import (
+    Department, Course, ClassSession, Enrollment, UserRole, User, Student,
+    Assignment, AssignmentSubmission
+)
+from app.schemas.schemas import (
+    DepartmentCreate, DepartmentOut, CourseCreate, CourseOut, ClassSessionCreate, ClassSessionOut,
+    AssignmentCreate, AssignmentOut, AssignmentSubmissionCreate, AssignmentSubmissionOut
+)
 from app.core.rbac import require_roles, get_current_user
 
 router = APIRouter(prefix="/academic", tags=["Academic & Rosters"])
@@ -69,3 +75,46 @@ def create_class_session(
 @router.get("/classes", response_model=List[ClassSessionOut])
 def list_classes(db: Session = Depends(get_db)):
     return db.query(ClassSession).all()
+
+@router.post("/assignments", response_model=AssignmentOut)
+def create_assignment(
+    assign_in: AssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN]))
+):
+    assign = Assignment(
+        class_id=assign_in.class_id,
+        title=assign_in.title,
+        description=assign_in.description,
+        due_date=assign_in.due_date,
+        max_marks=assign_in.max_marks
+    )
+    db.add(assign)
+    db.commit()
+    db.refresh(assign)
+    return assign
+
+@router.get("/assignments/class/{class_id}", response_model=List[AssignmentOut])
+def list_class_assignments(class_id: int, db: Session = Depends(get_db)):
+    return db.query(Assignment).filter(Assignment.class_id == class_id).all()
+
+@router.post("/assignments/submit", response_model=AssignmentSubmissionOut)
+def submit_assignment(
+    sub_in: AssignmentSubmissionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.STUDENT]))
+):
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(status_code=400, detail="Student profile not found")
+
+    submission = AssignmentSubmission(
+        assignment_id=sub_in.assignment_id,
+        student_id=student.id,
+        submission_text=sub_in.submission_text,
+        attachment_url=sub_in.attachment_url
+    )
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+    return submission

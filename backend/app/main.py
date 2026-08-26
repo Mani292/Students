@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db.session import engine, Base
-from app.api.v1 import auth, academic, attendance, permissions, services, notifications, ai, career
+from app.api.v1 import auth, academic, attendance, permissions, services, notifications, ai, career, campus, admin
 from app.services.rag_engine import seed_knowledge_base
 from app.db.session import SessionLocal
 
@@ -37,7 +37,9 @@ app.include_router(services.router, prefix=settings.API_V1_STR)
 app.include_router(notifications.router, prefix=settings.API_V1_STR)
 app.include_router(ai.router, prefix=settings.API_V1_STR)
 app.include_router(career.router, prefix=settings.API_V1_STR)
+app.include_router(campus.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to AI-Powered Smart University Digital Ecosystem API"}
+    return {"message": "Welcome to AI-Powered Smart University Digital Ecosystem API", "version": "1.0.0"}
