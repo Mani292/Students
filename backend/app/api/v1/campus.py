@@ -1,42 +1,65 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
-from datetime import datetime, timedelta
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
 
 from app.db.session import get_db
 from app.models.all_models import (
     LibraryBook, LibraryBorrowRecord, HostelRoom, HostelComplaint,
-    TransportRoute, BusPass, CampusEvent, EventRegistration,
-    StudentSkillPassport, Student, User, UserRole
-)
-from app.schemas.schemas import (
-    LibraryBookOut, LibraryBorrowRequest, LibraryBorrowOut,
-    HostelRoomOut, HostelComplaintCreate, HostelComplaintOut,
-    TransportRouteOut, BusPassOut,
-    CampusEventOut, SkillPassportCreate, SkillPassportOut
+    TransportRoute, CampusEvent, EventRegistration, StudentSkillPassport,
+    User, UserRole, Student
 )
 from app.core.rbac import require_roles, get_current_user
 
-router = APIRouter(prefix="/campus", tags=["Campus Services: Library, Hostel, Transport, Events and Passport"])
+router = APIRouter(prefix="/campus", tags=["Campus Services Ecosystem"])
 
-# --- Library Subsystem ---
-@router.get("/library/books", response_model=List[LibraryBookOut])
-def list_library_books(db: Session = Depends(get_db)):
-    books = db.query(LibraryBook).all()
-    if not books:
-        default_books = [
-            LibraryBook(isbn="978-0131103627", title="The C Programming Language", author="Brian W. Kernighan, Dennis M. Ritchie", category="Computer Science", total_copies=6, available_copies=5),
-            LibraryBook(isbn="978-0262033848", title="Introduction to Algorithms", author="Thomas H. Cormen, Charles E. Leiserson", category="Algorithms", total_copies=8, available_copies=6),
-            LibraryBook(isbn="978-0134092669", title="Operating Systems: Three Easy Pieces", author="Remzi H. Arpaci-Dusseau", category="Systems", total_copies=5, available_copies=4)
-        ]
-        db.add_all(default_books)
-        db.commit()
-        books = db.query(LibraryBook).all()
-    return books
+# --- Library Schemas & Endpoints ---
 
-@router.post("/library/borrow", response_model=LibraryBorrowOut)
-def borrow_book(
-    req: LibraryBorrowRequest,
+class BookOut(BaseModel):
+    id: int
+    isbn: str
+    title: str
+    author: str
+    category: str
+    total_copies: int
+    available_copies: int
+
+    class Config:
+        from_attributes = True
+
+@router.get("/library/books", response_model=List[BookOut])
+def list_library_books(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(LibraryBook)
+    if category:
+        query = query.filter(LibraryBook.category.ilike(f"%{category}%"))
+    return query.all()
+
+# --- Hostel Schemas & Endpoints ---
+
+class ComplaintCreateRequest(BaseModel):
+    room_number: str
+    issue_type: str
+    description: str
+
+class ComplaintOut(BaseModel):
+    id: int
+    student_id: int
+    room_number: str
+    issue_type: str
+    description: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+@router.post("/hostel/complaints", response_model=ComplaintOut)
+def submit_hostel_complaint(
+    req: ComplaintCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles([UserRole.STUDENT]))
 ):
@@ -44,102 +67,85 @@ def borrow_book(
     if not student:
         raise HTTPException(status_code=400, detail="Student profile not found")
 
-    book = db.query(LibraryBook).filter(LibraryBook.id == req.book_id).first()
-    if not book or book.available_copies <= 0:
-        raise HTTPException(status_code=400, detail="Book not available for borrowing")
-
-    book.available_copies -= 1
-    borrow = LibraryBorrowRecord(
-        book_id=book.id,
+    complaint = HostelComplaint(
         student_id=student.id,
-        due_date=datetime.utcnow() + timedelta(days=14),
-        status="BORROWED"
-    )
-    db.add(borrow)
-    db.commit()
-    db.refresh(borrow)
-    return borrow
-
-# --- Hostel Subsystem ---
-@router.get("/hostel/rooms", response_model=List[HostelRoomOut])
-def list_hostel_rooms(db: Session = Depends(get_db)):
-    rooms = db.query(HostelRoom).all()
-    if not rooms:
-        defaults = [
-            HostelRoom(hostel_name="Aryabhata Hall", room_number="A-101", capacity=2, occupied_count=2),
-            HostelRoom(hostel_name="Aryabhata Hall", room_number="A-102", capacity=2, occupied_count=1),
-            HostelRoom(hostel_name="Gargi Hall", room_number="G-201", capacity=3, occupied_count=2)
-        ]
-        db.add_all(defaults)
-        db.commit()
-        rooms = db.query(HostelRoom).all()
-    return rooms
-
-@router.post("/hostel/complaints", response_model=HostelComplaintOut)
-def lodge_hostel_complaint(
-    req: HostelComplaintCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.STUDENT]))
-):
-    student = db.query(Student).filter(Student.user_id == current_user.id).first()
-    if not student:
-        raise HTTPException(status_code=400, detail="Student profile not found")
-
-    comp = HostelComplaint(
-        student_id=student.id,
-        category=req.category,
+        room_number=req.room_number,
+        issue_type=req.issue_type,
         description=req.description,
         status="OPEN"
     )
-    db.add(comp)
+    db.add(complaint)
     db.commit()
-    db.refresh(comp)
-    return comp
+    db.refresh(complaint)
+    return complaint
 
-# --- Transport Subsystem ---
+# --- Transport Schemas & Endpoints ---
+
+class TransportRouteOut(BaseModel):
+    id: int
+    route_name: str
+    bus_number: str
+    driver_contact: Optional[str]
+    pickup_points: List[str]
+    departure_time: str
+
+    class Config:
+        from_attributes = True
+
 @router.get("/transport/routes", response_model=List[TransportRouteOut])
 def list_transport_routes(db: Session = Depends(get_db)):
-    routes = db.query(TransportRoute).all()
-    if not routes:
-        defaults = [
-            TransportRoute(route_name="Route 1 - North Express", bus_number="BUS-01", stops=["Central Station", "Metro Hub", "Science Park", "Campus Main Gate"], schedule_time="07:30 AM / 05:30 PM"),
-            TransportRoute(route_name="Route 2 - South Tech Corridor", bus_number="BUS-02", stops=["South Terminal", "City Square", "Tech Tower", "Campus Gate 2"], schedule_time="07:45 AM / 05:45 PM")
-        ]
-        db.add_all(defaults)
-        db.commit()
-        routes = db.query(TransportRoute).all()
-    return routes
+    return db.query(TransportRoute).all()
 
-# --- Events and Hackathons ---
-@router.get("/events", response_model=List[CampusEventOut])
-def list_events(db: Session = Depends(get_db)):
-    events = db.query(CampusEvent).all()
-    if not events:
-        defaults = [
-            CampusEvent(title="Smart University Hackathon 2026", category="HACKATHON", description="48-hour build sprint focusing on AI, Cloud, and Smart Campus applications.", event_date=datetime.utcnow() + timedelta(days=10), venue="University Innovation Center", registration_open=True),
-            CampusEvent(title="Hands-on RAG and LLM Deployment Workshop", category="WORKSHOP", description="Practical deep-dive into building production AI agents and guardrails.", event_date=datetime.utcnow() + timedelta(days=15), venue="Seminar Hall B", registration_open=True)
-        ]
-        db.add_all(defaults)
-        db.commit()
-        events = db.query(CampusEvent).all()
-    return events
+# --- Events Schemas & Endpoints ---
+
+class EventOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    category: str
+    event_date: datetime
+    location: str
+    organizer: str
+
+    class Config:
+        from_attributes = True
+
+@router.get("/events", response_model=List[EventOut])
+def list_campus_events(db: Session = Depends(get_db)):
+    return db.query(CampusEvent).all()
 
 # --- Student Skill Passport ---
-@router.get("/skill-passport/me", response_model=List[SkillPassportOut])
+
+class SkillPassportOut(BaseModel):
+    student_id: int
+    verified_skills: List[str]
+    certifications: List[str]
+    achievements: List[str]
+    projects_count: int
+
+    class Config:
+        from_attributes = True
+
+@router.get("/passport/me", response_model=SkillPassportOut)
 def get_my_skill_passport(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles([UserRole.STUDENT]))
 ):
     student = db.query(Student).filter(Student.user_id == current_user.id).first()
     if not student:
-        return []
-    records = db.query(StudentSkillPassport).filter(StudentSkillPassport.student_id == student.id).all()
-    if not records:
-        defaults = [
-            StudentSkillPassport(student_id=student.id, skill_name="Python Microservices", proficiency="ADVANCED", verified_by_faculty=True, badge_title="Backend Specialist", details={"certifications": ["Certified Python Developer"], "projects": ["Smart University Ecosystem"]}),
-            StudentSkillPassport(student_id=student.id, skill_name="AI / RAG Architecture", proficiency="INTERMEDIATE", verified_by_faculty=True, badge_title="AI Practitioner", details={"hackathons": ["Top 5 Finalist Campus Hack 2025"]})
-        ]
-        db.add_all(defaults)
+        raise HTTPException(status_code=400, detail="Student profile not found")
+
+    passport = db.query(StudentSkillPassport).filter(StudentSkillPassport.student_id == student.id).first()
+    if not passport:
+        passport = StudentSkillPassport(
+            student_id=student.id,
+            verified_skills=student.skills or ["Python", "FastAPI"],
+            certifications=["University Python Foundations"],
+            achievements=["Dean's List Semester 1"],
+            projects_count=3
+        )
+        db.add(passport)
         db.commit()
-        records = db.query(StudentSkillPassport).filter(StudentSkillPassport.student_id == student.id).all()
-    return records
+        db.refresh(passport)
+
+    return passport

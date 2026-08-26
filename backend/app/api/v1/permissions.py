@@ -17,15 +17,13 @@ def _build_permission_out(perm: PermissionRequest, db: Session) -> PermissionOut
     return PermissionOut(
         id=perm.id,
         student_id=perm.student_id,
-        roll_number=student.roll_number if student else "N/A",
+        student_roll_number=student.roll_number if student else "N/A",
         student_name=user.full_name if user else "Unknown Student",
         reason=perm.reason,
         start_date=perm.start_date,
         end_date=perm.end_date,
         proof_url=perm.proof_url,
         comments=perm.comments,
-        faculty_comment=perm.faculty_comment,
-        hod_comment=perm.hod_comment,
         status=perm.status,
         created_at=perm.created_at
     )
