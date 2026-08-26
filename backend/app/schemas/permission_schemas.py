@@ -10,21 +10,19 @@ class PermissionApplyRequest(BaseModel):
     proof_url: Optional[str] = None
 
 class PermissionActionRequest(BaseModel):
-    action: str # "APPROVE", "REJECT", "FORWARD_HOD"
+    action: str # "APPROVE", "REJECT", "FORWARD"
     comments: Optional[str] = None
 
 class PermissionOut(BaseModel):
     id: int
     student_id: int
+    student_roll_number: Optional[str] = None
     student_name: Optional[str] = None
-    roll_number: Optional[str] = None
     reason: str
     start_date: datetime
     end_date: datetime
-    proof_url: Optional[str] = None
-    comments: Optional[str] = None
-    faculty_comment: Optional[str] = None
-    hod_comment: Optional[str] = None
+    proof_url: Optional[str]
+    comments: Optional[str]
     status: PermissionStatus
     created_at: datetime
 

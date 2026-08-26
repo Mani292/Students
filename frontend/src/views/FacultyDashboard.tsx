@@ -17,7 +17,7 @@ export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ userEmail, o
   ]);
 
   const [permissions, setPermissions] = useState([
-    { id: 101, studentName: 'Charlie Student', reason: 'Fever Medical Leave', dates: '2025-08-26 to 2025-08-28', status: 'PENDING' }
+    { id: 101, studentName: 'Charlie Student', rollNumber: 'STU2025001', reason: 'Fever Medical Leave', dates: '2025-08-26 to 2025-08-28', status: 'PENDING' }
   ]);
 
   useEffect(() => {
@@ -113,12 +113,17 @@ export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ userEmail, o
         </div>
 
         {/* Leave Permissions Approval Center */}
-        <Card title="Student Leave & Permission Requests">
+        <Card title="Student Leave & Permission Requests" subtitle="Approved leave records notify faculty with student Roll Numbers for manual attendance adjustment.">
           <div className="divide-y divide-slate-200">
             {permissions.map(p => (
               <div key={p.id} className="py-3 flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-sm text-slate-900">{p.studentName}</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="font-semibold text-sm text-slate-900">{p.studentName}</p>
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-800 text-xs font-mono font-bold rounded">
+                      Roll No: {p.rollNumber}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500">{p.reason} • ({p.dates})</p>
                 </div>
                 <div className="flex items-center space-x-2">
