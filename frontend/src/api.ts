@@ -46,6 +46,7 @@ export interface ServiceRequest {
 }
 
 export interface AIChatResponse {
+  conversation_id?: number;
   response: string;
   sources: Array<Record<string, unknown>>;
   tools_used: string[];
@@ -145,6 +146,15 @@ export async function login(email: string, password: string): Promise<Session> {
   return { token: session.access_token, refreshToken: session.refresh_token, user };
 }
 
+export async function registerStudent(email: string, password: string, fullName: string, rollNumber: string, departmentCode: string): Promise<Session> {
+  const session = await request<LoginResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, full_name: fullName, roll_number: rollNumber, department_code: departmentCode }),
+  });
+  const user = await request<SessionUser>('/auth/me', {}, session.access_token);
+  return { token: session.access_token, refreshToken: session.refresh_token, user };
+}
+
 export async function refreshSession(refreshToken: string): Promise<Session> {
   const session = await request<LoginResponse>('/auth/refresh', {
     method: 'POST',
@@ -202,10 +212,10 @@ export function getDigitalId(token: string) {
   return request<Record<string, string | number>>('/services/digital-id/me', {}, token);
 }
 
-export function sendAIMessage(token: string, message: string) {
+export function sendAIMessage(token: string, message: string, conversationId?: number) {
   return request<AIChatResponse>('/ai/chat', {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, conversation_id: conversationId }),
   }, token);
 }
 

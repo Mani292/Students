@@ -3,8 +3,10 @@ from typing import Optional, List, Dict, Any
 
 class AIChatRequest(BaseModel):
     message: str
+    conversation_id: Optional[int] = None
 
 class AIChatResponse(BaseModel):
+    conversation_id: Optional[int] = None
     response: str
     sources: List[Dict[str, Any]] = []
     tools_used: List[str] = []

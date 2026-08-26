@@ -1,11 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from app.models.all_models import AttendanceStatus
 
 class SessionStartRequest(BaseModel):
     class_id: int
-    duration_minutes: int = 45
+    duration_minutes: int = Field(default=45, ge=1, le=180)
 
 class SessionOut(BaseModel):
     session_id: int
@@ -20,7 +20,7 @@ class SessionOut(BaseModel):
 class AttendanceSubmitRequest(BaseModel):
     session_token: str
     totp_code: str
-    device_fingerprint: str
+    device_fingerprint: str = Field(min_length=8, max_length=256)
     ip_address: Optional[str] = "127.0.0.1"
 
 class AttendanceRecordOut(BaseModel):

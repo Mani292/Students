@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.db.session import get_db
-from app.models.all_models import PermissionRequest, PermissionStatus, User, UserRole, Student, Notification, NotificationPriority
+from app.models.all_models import PermissionRequest, PermissionStatus, User, UserRole, Student, Faculty, Notification, NotificationPriority
 from app.schemas.permission_schemas import PermissionApplyRequest, PermissionActionRequest, PermissionOut
 from app.core.rbac import require_roles, get_current_user
 from app.services.audit_service import log_audit_event
@@ -82,10 +82,15 @@ def get_pending_permissions(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN, UserRole.SUPER_ADMIN]))
 ):
-    if current_user.role == UserRole.FACULTY:
-        perms = db.query(PermissionRequest).filter(PermissionRequest.status == PermissionStatus.APPROVED).all()
-    elif current_user.role == UserRole.HOD:
-        perms = db.query(PermissionRequest).filter(PermissionRequest.status == PermissionStatus.HOD_REVIEW).all()
+    if current_user.role in [UserRole.FACULTY, UserRole.HOD]:
+        faculty = db.query(Faculty).filter(Faculty.user_id == current_user.id).first()
+        if not faculty:
+            raise HTTPException(status_code=403, detail="Staff department profile not found")
+        status_filter = PermissionStatus.APPROVED if current_user.role == UserRole.FACULTY else PermissionStatus.HOD_REVIEW
+        perms = db.query(PermissionRequest).join(Student).filter(
+            PermissionRequest.status == status_filter,
+            Student.department_id == faculty.department_id,
+        ).all()
     else:
         perms = db.query(PermissionRequest).filter(PermissionRequest.status != PermissionStatus.APPROVED).all()
     return [_build_permission_out(p, db) for p in perms]
@@ -107,17 +112,23 @@ def update_permission_status(
     if req.action == "APPROVE":
         if current_user.role == UserRole.FACULTY:
             raise HTTPException(status_code=403, detail="Faculty review is available after HOD approval")
+        if current_user.role == UserRole.HOD and permission.status != PermissionStatus.HOD_REVIEW:
+            raise HTTPException(status_code=409, detail="Only requests awaiting HOD review can be approved")
         permission.status = PermissionStatus.APPROVED
-        faculty_users = db.query(User).filter(User.role == UserRole.FACULTY).all()
+        faculty_users = db.query(Faculty).filter(Faculty.department_id == student.department_id).all()
         for faculty_user in faculty_users:
             db.add(Notification(
-                user_id=faculty_user.id,
+            user_id=faculty_user.user_id,
                 title=f"Approved permission: Roll No {student.roll_number}",
                 message=f"HOD approved permission for student roll number {student.roll_number}. Update attendance records as needed.",
                 category="PERMISSION",
                 priority=NotificationPriority.ACTION_REQUIRED,
             ))
     elif req.action == "REJECT":
+        if current_user.role == UserRole.FACULTY:
+            raise HTTPException(status_code=403, detail="Faculty cannot modify permission decisions")
+        if current_user.role == UserRole.HOD and permission.status != PermissionStatus.HOD_REVIEW:
+            raise HTTPException(status_code=409, detail="Only requests awaiting HOD review can be rejected")
         permission.status = PermissionStatus.REJECTED
     elif req.action == "FORWARD":
         raise HTTPException(status_code=400, detail="Requests are submitted directly to HOD review")

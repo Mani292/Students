@@ -4,6 +4,7 @@
 
 ### Authentication & Authorization
 - `POST /auth/login` - User login with credentials, returns JWT access and refresh token.
+- `POST /auth/register` - Create a student account with a validated profile. Roles are assigned server-side.
 - `POST /auth/refresh` - Refresh access token using refresh token.
 - `GET /auth/me` - Get current user profile and role details.
 

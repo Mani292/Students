@@ -8,6 +8,13 @@ DEMO_PASSWORD = "password123"
 
 
 def seed_demo_accounts(db: Session) -> None:
+    # Older demo/test databases may contain profiles whose users were removed.
+    # Remove only those unusable orphan profiles before creating new accounts.
+    users_query = db.query(User.id)
+    db.query(Student).filter(~Student.user_id.in_(users_query)).delete(synchronize_session=False)
+    db.query(Faculty).filter(~Faculty.user_id.in_(users_query)).delete(synchronize_session=False)
+    db.flush()
+
     department = db.query(Department).filter(Department.code == "CSE").first()
     if not department:
         department = Department(code="CSE", name="Computer Science & Engineering")

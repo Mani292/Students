@@ -19,6 +19,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
     { sender: 'ai', text: 'Hello! I am your Smart University AI Assistant. How can I assist you with your academics, attendance, or career today?' }
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [conversationId, setConversationId] = useState<number | undefined>();
 
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -61,7 +62,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
     setMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setChatInput('');
     try {
-      const result = await sendAIMessage(token, userMsg);
+      const result = await sendAIMessage(token, userMsg, conversationId);
+      setConversationId(result.conversation_id);
       setMessages(prev => [...prev, { sender: 'ai', text: result.response, tools: result.tools_used }]);
     } catch (error) {
       setMessages(prev => [...prev, { sender: 'ai', text: error instanceof Error ? error.message : 'AI request failed' }]);

@@ -32,6 +32,11 @@ def start_attendance_session(
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class session not found")
 
+    if current_user.role == UserRole.FACULTY and class_obj.faculty_id != faculty.id:
+        raise HTTPException(status_code=403, detail="Faculty member is not assigned to this class")
+    if current_user.role == UserRole.HOD and faculty and class_obj.course.department_id != faculty.department_id:
+        raise HTTPException(status_code=403, detail="Class is outside the HOD's department")
+
     # Deactivate existing sessions for class
     active_sessions = db.query(AttendanceSession).filter(
         AttendanceSession.class_id == req.class_id,
@@ -98,6 +103,13 @@ def record_attendance(
     # Anti-Proxy Verification 1: TOTP Code Check
     if not verify_totp_code(session_obj.totp_secret, req.totp_code):
         raise HTTPException(status_code=400, detail="Invalid or expired dynamic TOTP code")
+
+    enrolled = db.query(Enrollment).filter(
+        Enrollment.student_id == student.id,
+        Enrollment.class_id == session_obj.class_id,
+    ).first()
+    if not enrolled:
+        raise HTTPException(status_code=403, detail="Student is not enrolled in this class")
 
     # Anti-Proxy Verification 2: Duplicate Student Submission
     existing_record = db.query(AttendanceRecord).filter(

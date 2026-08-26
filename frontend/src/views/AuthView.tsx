@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Card } from '../components/UIComponents';
 import { GraduationCap, ShieldCheck, UserCheck, Lock } from 'lucide-react';
-import { login, type Session } from '../api';
+import { login, registerStudent, type Session } from '../api';
 
 interface AuthViewProps {
   onLogin: (session: Session) => void;
@@ -13,13 +13,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
   const [role, setRole] = useState<'STUDENT' | 'FACULTY' | 'ADMIN'>('STUDENT');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [rollNumber, setRollNumber] = useState('');
+  const [departmentCode, setDepartmentCode] = useState('CSE');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
     try {
-      const session = await login(email, password);
+      const session = isRegistering
+        ? await registerStudent(email, password, fullName, rollNumber, departmentCode)
+        : await login(email, password);
       onLogin(session);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
@@ -40,8 +46,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card className="bg-white border-none shadow-2xl p-8 rounded-2xl">
+          <div className="flex gap-2 mb-6">
+            <Button type="button" variant={!isRegistering ? 'primary' : 'outline'} className="flex-1" onClick={() => setIsRegistering(false)}>Sign in</Button>
+            <Button type="button" variant={isRegistering ? 'primary' : 'outline'} className="flex-1" onClick={() => setIsRegistering(true)}>Create account</Button>
+          </div>
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
+            {!isRegistering && <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Select Account Role</label>
               <div className="grid grid-cols-3 gap-3">
                 <button
@@ -75,7 +85,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
                   Admin
                 </button>
               </div>
-            </div>
+            </div>}
+
+            {isRegistering && <>
+              <div><label className="block text-sm font-medium text-slate-700">Full name</label><input required value={fullName} onChange={event => setFullName(event.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+              <div><label className="block text-sm font-medium text-slate-700">Roll number</label><input required value={rollNumber} onChange={event => setRollNumber(event.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+              <div><label className="block text-sm font-medium text-slate-700">Department code</label><input required value={departmentCode} onChange={event => setDepartmentCode(event.target.value.toUpperCase())} placeholder="CSE" className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
+            </>}
 
             <div>
               <label className="block text-sm font-medium text-slate-700">University Email</label>
@@ -102,7 +118,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
             {error && <p role="alert" className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3">{error}</p>}
 
             <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Sign In to Ecosystem'}
+              {isSubmitting ? 'Please wait...' : isRegistering ? 'Create student account' : 'Sign In to Ecosystem'}
             </Button>
           </form>
         </Card>

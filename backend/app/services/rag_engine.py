@@ -1,3 +1,6 @@
+import math
+import re
+from collections import Counter
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.all_models import KnowledgeDocument
@@ -40,23 +43,36 @@ def seed_knowledge_base(db: Session):
 def search_knowledge_base(query: str, db: Session, top_k: int = 3) -> List[Dict[str, Any]]:
     seed_knowledge_base(db)
     docs = db.query(KnowledgeDocument).all()
-    query_terms = query.lower().split()
+    query_terms = _tokens(query)
+    if not query_terms:
+        return []
+
+    document_tokens = [_tokens(f"{document.title} {document.content} {document.category}") for document in docs]
+    document_frequency = Counter(token for tokens in document_tokens for token in set(tokens))
+    query_counts = Counter(query_terms)
 
     scored_docs = []
-    for d in docs:
-        score = 0
-        text = (d.title + " " + d.content + " " + d.category).lower()
-        for term in query_terms:
-            if term in text:
-                score += 1
+    for d, tokens in zip(docs, document_tokens):
+        counts = Counter(tokens)
+        score = 0.0
+        for term, frequency in query_counts.items():
+            if term not in counts:
+                continue
+            inverse_document_frequency = math.log((1 + len(docs)) / (1 + document_frequency[term])) + 1
+            score += (1 + math.log(frequency)) * (1 + math.log(counts[term])) * inverse_document_frequency
         if score > 0:
             scored_docs.append({
                 "id": d.id,
                 "title": d.title,
                 "category": d.category,
                 "content": d.content,
-                "score": score
+                "score": round(score, 4),
+                "source": d.source or f"knowledge_document:{d.id}",
             })
 
     scored_docs.sort(key=lambda x: x["score"], reverse=True)
     return scored_docs[:top_k]
+
+
+def _tokens(text: str) -> List[str]:
+    return [token for token in re.findall(r"[a-z0-9%]+", text.lower()) if len(token) > 2]

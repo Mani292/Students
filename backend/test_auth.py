@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import uuid
 from app.main import app
 from app.core.security import get_password_hash
 from app.models.all_models import User, UserRole
@@ -39,6 +40,26 @@ def test_auth_login_and_refresh():
     # Test bad login
     res_bad = client.post("/api/v1/auth/login", json={"email": email, "password": "wrongpassword"})
     assert res_bad.status_code == 401
+
+    registration_email = f"new_student_{uuid.uuid4().hex[:8]}@univ.edu"
+    registration = client.post("/api/v1/auth/register", json={
+        "email": registration_email,
+        "password": "securepass123",
+        "full_name": "New Student",
+        "roll_number": f"NEW{uuid.uuid4().hex[:8]}",
+        "department_code": "CSE",
+    })
+    assert registration.status_code == 201, registration.text
+    assert registration.json()["role"] == "STUDENT"
+
+    duplicate = client.post("/api/v1/auth/register", json={
+        "email": registration_email,
+        "password": "securepass123",
+        "full_name": "Another Student",
+        "roll_number": f"OTHER{uuid.uuid4().hex[:8]}",
+        "department_code": "CSE",
+    })
+    assert duplicate.status_code == 409
 
 if __name__ == "__main__":
     test_auth_login_and_refresh()
