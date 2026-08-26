@@ -243,3 +243,105 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     actor = relationship("User", back_populates="audit_logs")
+
+# --- Extended Campus & AI Ecosystem Models ---
+
+class LibraryBook(Base):
+    __tablename__ = "library_books"
+
+    id = Column(Integer, primary_key=True, index=True)
+    isbn = Column(String, unique=True, index=True, nullable=False)
+    title = Column(String, nullable=False)
+    author = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    total_copies = Column(Integer, default=1)
+    available_copies = Column(Integer, default=1)
+
+class LibraryBorrowRecord(Base):
+    __tablename__ = "library_borrow_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    book_id = Column(Integer, ForeignKey("library_books.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    borrowed_at = Column(DateTime, default=datetime.utcnow)
+    due_date = Column(DateTime, nullable=False)
+    returned_at = Column(DateTime, nullable=True)
+    fine_amount = Column(Float, default=0.0)
+
+class HostelRoom(Base):
+    __tablename__ = "hostel_rooms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    block_name = Column(String, nullable=False)
+    room_number = Column(String, nullable=False)
+    capacity = Column(Integer, default=2)
+    occupied_beds = Column(Integer, default=0)
+
+class HostelComplaint(Base):
+    __tablename__ = "hostel_complaints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    room_number = Column(String, nullable=False)
+    issue_type = Column(String, nullable=False) # e.g. "Plumbing", "Electrical", "Cleaning"
+    description = Column(Text, nullable=False)
+    status = Column(String, default="OPEN") # OPEN, IN_PROGRESS, RESOLVED
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class TransportRoute(Base):
+    __tablename__ = "transport_routes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    route_name = Column(String, nullable=False)
+    bus_number = Column(String, nullable=False)
+    driver_contact = Column(String, nullable=True)
+    pickup_points = Column(JSON, default=list)
+    departure_time = Column(String, nullable=False)
+
+class CampusEvent(Base):
+    __tablename__ = "campus_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=False) # e.g. "Hackathon", "Seminar", "Workshop"
+    event_date = Column(DateTime, nullable=False)
+    location = Column(String, nullable=False)
+    organizer = Column(String, nullable=False)
+
+class EventRegistration(Base):
+    __tablename__ = "event_registrations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("campus_events.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    registered_at = Column(DateTime, default=datetime.utcnow)
+
+class StudentSkillPassport(Base):
+    __tablename__ = "student_skill_passports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), unique=True, nullable=False)
+    verified_skills = Column(JSON, default=list)
+    certifications = Column(JSON, default=list)
+    achievements = Column(JSON, default=list)
+    projects_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+class AIConversation(Base):
+    __tablename__ = "ai_conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, default="New Conversation")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AIMessage(Base):
+    __tablename__ = "ai_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("ai_conversations.id"), nullable=False)
+    sender = Column(String, nullable=False) # "user" or "assistant"
+    content = Column(Text, nullable=False)
+    tool_calls = Column(JSON, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)

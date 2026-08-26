@@ -39,6 +39,9 @@ def run_all():
     test_ai_tools.test_ai_tools()
     test_ai_api.test_ai_api()
     test_career_api.test_career_api()
+
+    import test_campus
+    test_campus.test_campus_api()
     print("ALL INTEGRATION TESTS SUCCEEDED PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":

@@ -22,26 +22,6 @@ DEFAULT_KNOWLEDGE_BASE = [
         "title": "Library Book Borrowing Rules",
         "category": "LIBRARY",
         "content": "Undergraduate students can borrow up to 4 books for a duration of 14 days. Overdue books incur a fine of $0.50 per day."
-    },
-    {
-        "title": "Academic Grading & CGPA Calculation",
-        "category": "ACADEMIC",
-        "content": "University uses a 10-point scale. Grade S (90-100%, 10 pts), Grade A (80-89%, 9 pts), Grade B (70-79%, 8 pts), Grade C (60-69%, 7 pts), Grade D (50-59%, 6 pts). Minimum passing grade is 50%."
-    },
-    {
-        "title": "Hostel Residence & Curfew Guidelines",
-        "category": "HOSTEL",
-        "content": "Hostel campus curfew is 9:30 PM on weekdays and 10:30 PM on weekends. Night outs require explicit parent approval and warden permission via the portal."
-    },
-    {
-        "title": "Campus Transport & Bus Pass Regulations",
-        "category": "TRANSPORT",
-        "content": "University buses operate across 12 city routes from 7:00 AM to 6:30 PM. Digital bus passes are valid for the full semester and verifiable via QR scan."
-    },
-    {
-        "title": "Career Placements & Internship Eligibility",
-        "category": "CAREER",
-        "content": "Students with CGPA >= 6.5 and zero active backlogs are eligible for campus placement drives. Minimum 75% attendance in training sessions is required."
     }
 ]
 
