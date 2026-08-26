@@ -25,7 +25,10 @@ def ai_copilot_chat(
     if "my attendance" in msg or "classes" in msg:
         tools_used.append("get_attendance_summary_tool")
         att = get_attendance_summary_tool(current_user, db)
-        response_text = f"Your current attendance summary:\nTotal Classes: {att['total_classes']}\nAttended: {att['classes_attended']}\nPercentage: {att['attendance_percentage']}%\nStatus: {att['status']}"
+        if "error" in att:
+            response_text = att["error"]
+        else:
+            response_text = f"Your current attendance summary:\nTotal Classes: {att['total_classes']}\nAttended: {att['classes_attended']}\nPercentage: {att['attendance_percentage']}%\nStatus: {att['status']}"
 
     elif "profile" in msg or "cgpa" in msg or "roll" in msg:
         tools_used.append("get_student_profile_tool")
