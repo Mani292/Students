@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { LandingPage } from './views/LandingPage';
 import { AuthView } from './views/AuthView';
 import { StudentPortal } from './views/StudentPortal';
 import { FacultyDashboard } from './views/FacultyDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
 import { refreshSession, type Session } from './api';
+
+type AppScreen = 'landing' | 'auth' | 'dashboard';
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(() => {
@@ -17,9 +20,13 @@ export const App: React.FC = () => {
     }
   });
 
+  // When there's no session, start on landing. When logged out, go back to landing.
+  const [screen, setScreen] = useState<AppScreen>(() => (session ? 'dashboard' : 'landing'));
+
   const handleLogin = (nextSession: Session) => {
     setSession(nextSession);
     localStorage.setItem('smart-university-session', JSON.stringify(nextSession));
+    setScreen('dashboard');
   };
 
   useEffect(() => {
@@ -32,25 +39,34 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     setSession(null);
     localStorage.removeItem('smart-university-session');
+    setScreen('landing');
   };
 
-  if (!session) {
-    return <AuthView onLogin={handleLogin} />;
+  // ── Landing ──
+  if (screen === 'landing') {
+    return <LandingPage onGetStarted={() => setScreen('auth')} />;
   }
 
-  if (session.user.role === 'STUDENT') {
-    return <StudentPortal userEmail={session.user.email} token={session.token} onLogout={handleLogout} />;
+  // ── Auth ──
+  if (screen === 'auth' || !session) {
+    return <AuthView onLogin={handleLogin} onBack={() => setScreen('landing')} />;
   }
 
-  if (session.user.role === 'FACULTY') {
-    return <FacultyDashboard userEmail={session.user.email} token={session.token} onLogout={handleLogout} />;
+  // ── Dashboard ──
+  const { email, role } = session.user;
+  const token = session.token;
+
+  if (role === 'STUDENT') {
+    return <StudentPortal userEmail={email} token={token} onLogout={handleLogout} />;
+  }
+  if (role === 'FACULTY') {
+    return <FacultyDashboard userEmail={email} token={token} onLogout={handleLogout} />;
+  }
+  if (['ADMIN', 'SUPER_ADMIN', 'HOD'].includes(role)) {
+    return <AdminDashboard userEmail={email} token={token} onLogout={handleLogout} />;
   }
 
-  if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' || session.user.role === 'HOD') {
-    return <AdminDashboard userEmail={session.user.email} token={session.token} onLogout={handleLogout} />;
-  }
-
-  return <AuthView onLogin={handleLogin} />;
+  return <AuthView onLogin={handleLogin} onBack={() => setScreen('landing')} />;
 };
 
 export default App;
