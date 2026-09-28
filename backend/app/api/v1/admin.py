@@ -55,3 +55,22 @@ def get_admin_overview(
         "pending_permissions": pending_permissions,
         "recent_audit_logs": logs,
     }
+
+@router.get("/mongodb-status")
+async def check_mongodb_status():
+    from app.db.mongodb import mongo_client, mongo_db
+    try:
+        ping = await mongo_db.command("ping")
+        cols = await mongo_db.list_collection_names()
+        return {
+            "status": "CONNECTED",
+            "cluster": "traffic-cluster.vj7wtnf.mongodb.net",
+            "database": "smart_university",
+            "ping": ping,
+            "collections": cols
+        }
+    except Exception as err:
+        return {
+            "status": "ERROR",
+            "error": str(err)
+        }
