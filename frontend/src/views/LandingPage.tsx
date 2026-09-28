@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Badge } from '../components/UIComponents';
 import {
   GraduationCap, Bot, Shield, BarChart3, Users, BookOpen, Briefcase,
-  CheckCircle, ArrowRight, Star, Zap, ChevronRight, Globe
+  CheckCircle, ArrowRight, Zap, ChevronRight, Globe
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -92,44 +92,13 @@ const portals = [
   },
 ];
 
-// ======= TESTIMONIALS =======
-const testimonials = [
-  {
-    quote: "We replaced three separate tools with this platform. Attendance fraud dropped to zero in the first month.",
-    author: "Dr. Rajesh Kumar",
-    role: "HOD, Computer Science — IIT Bhopal",
-    rating: 5,
-  },
-  {
-    quote: "Students love the AI career matching. Job placement rate improved by 34% after we onboarded this semester.",
-    author: "Prof. Anita Sharma",
-    role: "Placement Coordinator — NIT Trichy",
-    rating: 5,
-  },
-  {
-    quote: "The admin dashboard gives me live data instead of waiting for weekly reports. Game changer.",
-    author: "Mr. Vikram Singh",
-    role: "University Registrar — Amity University",
-    rating: 5,
-  },
+// ======= SYSTEM METRICS =======
+const systemCapabilities = [
+  { label: 'Role-Based Portals', value: '3', desc: 'Student, Faculty, Admin' },
+  { label: 'Normalized Database Tables', value: '40', desc: 'Relational Schema' },
+  { label: 'TOTP Window', value: '15s', desc: 'Anti-Proxy Attendance' },
+  { label: 'RAG Knowledge Layers', value: '3-Tier', desc: 'University AI Engine' },
 ];
-
-// ======= STAT COUNTER =======
-const CountUp: React.FC<{ target: number; suffix?: string; prefix?: string }> = ({ target, suffix = '', prefix = '' }) => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const duration = 2000;
-    const step = target / (duration / 16);
-    const interval = setInterval(() => {
-      start = Math.min(start + step, target);
-      setCount(Math.floor(start));
-      if (start >= target) clearInterval(interval);
-    }, 16);
-    return () => clearInterval(interval);
-  }, [target]);
-  return <>{prefix}{count.toLocaleString()}{suffix}</>;
-};
 
 // ======= MAIN COMPONENT =======
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
@@ -157,7 +126,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <div className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Features</a>
             <a href="#portals" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Portals</a>
-            <a href="#testimonials" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Testimonials</a>
+            <a href="#architecture" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Architecture</a>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={onGetStarted}>Sign In</Button>
@@ -202,19 +171,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </Button>
           </div>
 
-          {/* Stats bar */}
+          {/* System Capabilities Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-in-up delay-300">
-            {[
-              { label: 'Students Managed', value: 50000, suffix: '+' },
-              { label: 'Institutions', value: 120, suffix: '+' },
-              { label: 'Attendance Accuracy', value: 99, suffix: '%' },
-              { label: 'Support Uptime', value: 99.9, suffix: '%', prefix: '' },
-            ].map((s, i) => (
+            {systemCapabilities.map((s, i) => (
               <div key={i} className="glass rounded-xl p-4 text-center">
-                <p className="text-2xl font-extrabold gradient-text">
-                  <CountUp target={s.value} suffix={s.suffix} />
-                </p>
-                <p className="text-xs text-[hsl(var(--text-muted))] mt-1">{s.label}</p>
+                <p className="text-2xl font-extrabold gradient-text">{s.value}</p>
+                <p className="text-xs font-semibold text-[hsl(var(--text-primary))] mt-1">{s.label}</p>
+                <p className="text-[10px] text-[hsl(var(--text-muted))]">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -288,33 +251,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* ===== TESTIMONIALS ===== */}
-      <section id="testimonials" className="py-24 px-6">
+      {/* ===== ARCHITECTURE & CAPABILITIES ===== */}
+      <section id="architecture" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="mb-4 inline-block"><Badge variant="warning" size="md">Testimonials</Badge></div>
+            <div className="mb-4 inline-block"><Badge variant="warning" size="md">Architecture & Security</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
-              Trusted by Educators
+              Enterprise Engineering Standards
             </h2>
+            <p className="text-[hsl(var(--text-secondary))] max-w-xl mx-auto text-sm">
+              Designed with zero-trust RBAC, permission-isolated AI tool execution, and anti-proxy TOTP validation.
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div key={i} className="feature-card animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-[hsl(var(--text-secondary))] leading-relaxed mb-5 italic">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {t.author.split(' ').map(p => p[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[hsl(var(--text-primary))]">{t.author}</p>
-                    <p className="text-[11px] text-[hsl(var(--text-muted))]">{t.role}</p>
-                  </div>
-                </div>
+            {[
+              { title: 'Smart Anti-Proxy TOTP', desc: '15-second dynamic rotating TOTP secrets combined with device fingerprint collisions and faculty manual override controls.' },
+              { title: 'Permission-Aware AI Tools', desc: '3-layer RAG agent architecture executing scoped internal tool wrappers that prevent cross-student data leaks.' },
+              { title: 'Multi-Tier Leave Workflows', desc: 'Configurable approval hierarchy from Faculty to HOD with automatic roll number broadcasting for manual attendance reconciliation.' },
+            ].map((arch, i) => (
+              <div key={i} className="feature-card">
+                <h3 className="font-bold text-[hsl(var(--text-primary))] mb-2 text-base">{arch.title}</h3>
+                <p className="text-xs text-[hsl(var(--text-secondary))] leading-relaxed">{arch.desc}</p>
               </div>
             ))}
           </div>
