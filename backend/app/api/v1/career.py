@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -8,7 +8,8 @@ from app.schemas.career_schemas import (
     JobSearchRequest, JobMatchRequest, JobMatchResponse, ResumeAnalysisRequest, ResumeAnalysisResponse,
     ProjectMentorRequest, ProjectMentorResponse
 )
-from app.core.rbac import get_current_user
+from app.core.rbac import get_current_user, require_roles
+from app.models.all_models import UserRole
 
 router = APIRouter(prefix="/career-project", tags=["AI Career Engine & Project Lab Workspace"])
 
@@ -30,8 +31,119 @@ MOCK_JOBS = [
 ]
 
 @router.get("/jobs")
-def get_jobs():
+def get_jobs(db: Session = Depends(get_db)):
+    from app.models.all_models import JobPosting, Company
+    postings = db.query(JobPosting).all()
+    if postings:
+        result = []
+        for p in postings:
+            c = db.query(Company).filter(Company.id == p.company_id).first()
+            result.append({
+                "id": p.id,
+                "title": p.title,
+                "company": c.name if c else "Company",
+                "package_ctc": p.package_ctc,
+                "location": c.location if c else "Campus",
+                "min_cgpa": p.min_cgpa,
+                "description": p.description,
+                "required_skills": p.allowed_departments or ["Engineering"]
+            })
+        return result
     return MOCK_JOBS
+
+@router.get("/companies")
+def list_companies(db: Session = Depends(get_db)):
+    from app.models.all_models import Company
+    return db.query(Company).all()
+
+@router.post("/companies")
+def create_company(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+):
+    from app.models.all_models import Company
+    comp = Company(
+        name=payload.get("name"),
+        website=payload.get("website"),
+        description=payload.get("description"),
+        industry=payload.get("industry"),
+        location=payload.get("location")
+    )
+    db.add(comp)
+    db.commit()
+    db.refresh(comp)
+    return comp
+
+@router.post("/postings")
+def create_job_posting(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+):
+    from app.models.all_models import JobPosting
+    from datetime import datetime
+    posting = JobPosting(
+        company_id=payload.get("company_id", 1),
+        title=payload.get("title", "Software Engineer"),
+        description=payload.get("description", "Exciting tech role"),
+        min_cgpa=payload.get("min_cgpa", 6.5),
+        allowed_departments=payload.get("allowed_departments", ["CSE", "ECE"]),
+        package_ctc=payload.get("package_ctc", "10 LPA"),
+        application_deadline=datetime.utcnow()
+    )
+    db.add(posting)
+    db.commit()
+    db.refresh(posting)
+    return posting
+
+@router.get("/applications")
+def list_applications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models.all_models import JobApplication, Student, JobPosting, Company
+    query = db.query(JobApplication)
+    if current_user.role == UserRole.STUDENT:
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if student:
+            query = query.filter(JobApplication.student_id == student.id)
+    apps = query.all()
+    res = []
+    for a in apps:
+        jp = db.query(JobPosting).filter(JobPosting.id == a.job_id).first()
+        comp = db.query(Company).filter(Company.id == jp.company_id).first() if jp else None
+        res.append({
+            "id": a.id,
+            "job_title": jp.title if jp else "Role",
+            "company_name": comp.name if comp else "Tech Corp",
+            "status": a.status.value if hasattr(a.status, 'value') else str(a.status),
+            "applied_at": a.applied_at
+        })
+    return res
+
+@router.post("/apply/{job_id}")
+def apply_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.STUDENT]))
+):
+    from app.models.all_models import JobApplication, Student, JobApplicationStatus
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile missing")
+    existing = db.query(JobApplication).filter(JobApplication.job_id == job_id, JobApplication.student_id == student.id).first()
+    if existing:
+        return {"message": "Already applied", "application_id": existing.id}
+    app_obj = JobApplication(
+        job_id=job_id,
+        student_id=student.id,
+        status=JobApplicationStatus.APPLIED
+    )
+    db.add(app_obj)
+    db.commit()
+    db.refresh(app_obj)
+    return {"message": "Application submitted successfully", "application_id": app_obj.id}
 
 @router.post("/match-job", response_model=JobMatchResponse)
 def match_job(req: JobMatchRequest):

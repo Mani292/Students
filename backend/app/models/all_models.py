@@ -345,3 +345,166 @@ class AIMessage(Base):
     content = Column(Text, nullable=False)
     tool_calls = Column(JSON, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+# --- Additional Core Data Entities for Sections 1-13 ---
+
+class AcademicActivity(Base):
+    __tablename__ = "academic_activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    faculty_id = Column(Integer, ForeignKey("faculty.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    activity_type = Column(String, default="ANNOUNCEMENT") # ANNOUNCEMENT, ASSIGNMENT, TASK, NOTICE
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Topic(Base):
+    __tablename__ = "topics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    unit_number = Column(Integer, default=1)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String, default="PLANNED") # PLANNED, IN_PROGRESS, COMPLETED
+    completed_at = Column(DateTime, nullable=True)
+
+class LearningTrack(Base):
+    __tablename__ = "learning_tracks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=False) # e.g. "Full-Stack", "AI/ML", "Cloud"
+    target_role = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+class LearningResource(Base):
+    __tablename__ = "learning_resources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    track_id = Column(Integer, ForeignKey("learning_tracks.id"), nullable=False)
+    title = Column(String, nullable=False)
+    resource_type = Column(String, default="ARTICLE") # ARTICLE, VIDEO, DOCUMENT, QUIZ
+    url_or_content = Column(Text, nullable=False)
+    sequence_order = Column(Integer, default=1)
+
+class Quiz(Base):
+    __tablename__ = "quizzes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    track_id = Column(Integer, ForeignKey("learning_tracks.id"), nullable=True)
+    title = Column(String, nullable=False)
+    questions = Column(JSON, default=list) # [{question, options, correct_answer_idx}]
+
+class QuizAttempt(Base):
+    __tablename__ = "quiz_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    quiz_id = Column(Integer, ForeignKey("quizzes.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    score = Column(Float, default=0.0)
+    passed = Column(Boolean, default=False)
+    attempted_at = Column(DateTime, default=datetime.utcnow)
+
+class StudentProgress(Base):
+    __tablename__ = "student_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    track_id = Column(Integer, ForeignKey("learning_tracks.id"), nullable=False)
+    completed_resources = Column(JSON, default=list) # [resource_ids]
+    progress_percentage = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+class Resume(Base):
+    __tablename__ = "resumes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    resume_text = Column(Text, nullable=False)
+    file_name = Column(String, nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+class ATSAnalysis(Base):
+    __tablename__ = "ats_analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    job_description = Column(Text, nullable=False)
+    ats_score = Column(Float, default=0.0)
+    missing_keywords = Column(JSON, default=list)
+    improvements = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Company(Base):
+    __tablename__ = "companies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    website = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    industry = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+
+class JobPosting(Base):
+    __tablename__ = "job_postings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    min_cgpa = Column(Float, default=6.0)
+    allowed_departments = Column(JSON, default=list)
+    package_ctc = Column(String, nullable=False) # e.g. "12 LPA"
+    application_deadline = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, default=True)
+
+class PlacementDrive(Base):
+    __tablename__ = "placement_drives"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    drive_date = Column(DateTime, nullable=False)
+    venue = Column(String, nullable=False)
+    status = Column(String, default="SCHEDULED") # SCHEDULED, ONGOING, COMPLETED
+
+class JobApplicationStatus(str, enum.Enum):
+    APPLIED = "APPLIED"
+    ASSESSMENT = "ASSESSMENT"
+    INTERVIEW = "INTERVIEW"
+    OFFERED = "OFFERED"
+    SELECTED = "SELECTED"
+    REJECTED = "REJECTED"
+
+class JobApplication(Base):
+    __tablename__ = "job_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("job_postings.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    status = Column(SQLEnum(JobApplicationStatus), default=JobApplicationStatus.APPLIED)
+    applied_at = Column(DateTime, default=datetime.utcnow)
+
+class InterviewStage(Base):
+    __tablename__ = "interview_stages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("job_applications.id"), nullable=False)
+    stage_name = Column(String, nullable=False) # e.g. "Technical Round 1"
+    scheduled_at = Column(DateTime, nullable=False)
+    feedback = Column(Text, nullable=True)
+    status = Column(String, default="PENDING") # PENDING, PASSED, FAILED
+
+class Offer(Base):
+    __tablename__ = "offers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("job_applications.id"), nullable=False)
+    ctc_offered = Column(String, nullable=False)
+    joining_date = Column(DateTime, nullable=True)
+    offer_letter_url = Column(String, nullable=True)
+    is_accepted = Column(Boolean, default=False)
