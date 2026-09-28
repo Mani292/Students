@@ -48,6 +48,9 @@ class Student(Base):
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     year = Column(Integer, default=1)
     semester = Column(Integer, default=1)
+    gender = Column(String, nullable=True) # e.g. "Male", "Female", "Other"
+    mobile_number = Column(String, nullable=True)
+    whatsapp_number = Column(String, nullable=True)
     cgpa = Column(Float, default=0.0)
     skills = Column(JSON, default=list) # e.g. ["Python", "FastAPI"]
     career_interests = Column(JSON, default=list)
