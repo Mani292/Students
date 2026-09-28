@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Badge } from '../components/UIComponents';
 import {
   GraduationCap, Bot, Shield, BarChart3, Users, BookOpen, Briefcase,
-  CheckCircle, ArrowRight, Star, Zap, ChevronRight, Globe
+  CheckCircle, ArrowRight, Zap, ChevronRight, Globe
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -49,105 +49,56 @@ const features = [
   },
 ];
 
-// ======= PRICING =======
-const plans = [
+// ======= PORTALS OVERVIEW =======
+const portals = [
   {
-    name: 'Free',
-    price: '₹0',
-    period: 'forever',
-    badge: null,
-    desc: 'Perfect for small departments or pilot testing.',
+    title: 'Student Portal',
+    badge: 'Self-Service Hub',
+    desc: 'Empowers students with attendance tracking, leave requests, AI learning roadmaps, ATS resume evaluation, and placement opportunities.',
     features: [
-      'Up to 100 students',
-      'Core attendance system',
-      'Permission workflow',
-      'Basic AI chat (10 messages/day)',
-      'Digital ID cards',
-      'Email support',
+      'Subject-wise attendance & history',
+      'Leave & permission request workflow',
+      'AI Learning Chatbot & roadmaps',
+      'Job matching & ATS resume evaluation',
+      'Digital Student ID card',
     ],
-    cta: 'Start Free',
-    variant: 'glass' as const,
-    featured: false,
+    role: 'STUDENT',
   },
   {
-    name: 'Pro',
-    price: '₹4,999',
-    period: '/ month',
-    badge: 'Most Popular',
-    desc: 'Full-featured for a single institution with up to 5,000 students.',
+    title: 'Faculty Portal',
+    badge: 'Academic Workspace',
+    desc: 'Enables faculty to manage TOTP attendance sessions, review student leave requests with roll numbers, and publish class activities.',
     features: [
-      'Up to 5,000 students',
-      'Full AI Copilot (unlimited)',
-      'AI Learning Roadmaps',
-      'Career & Job Matching',
-      'Advanced Analytics Dashboard',
-      'API access',
-      'Priority support',
-      'White-label logo',
+      '15s Rotating TOTP attendance generator',
+      'Leave request review & approval workflow',
+      'Topic allocation & syllabus coverage',
+      'Academic activity & notice publisher',
+      'Authorized student profile access',
     ],
-    cta: 'Start 14-day Trial',
-    variant: 'primary' as const,
-    featured: true,
+    role: 'FACULTY',
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    period: '',
-    badge: null,
-    desc: 'For universities with multiple campuses or custom integration needs.',
+    title: 'Admin Console',
+    badge: 'Platform Management',
+    desc: 'Provides central administration, user management, academic configuration, RAG knowledge base indexing, and system audit logs.',
     features: [
-      'Unlimited students',
-      'Custom AI model integration',
-      'On-premise deployment option',
-      'ERP / SIS integration',
-      'Dedicated account manager',
-      'SLA guarantee (99.9%)',
-      'Custom modules on request',
+      'User account lifecycle management',
+      'Role-based access control (RBAC)',
+      'Department, course & class setup',
+      'Institutional RAG document management',
+      'Live university metrics & audit trails',
     ],
-    cta: 'Contact Sales',
-    variant: 'glass' as const,
-    featured: false,
+    role: 'ADMIN',
   },
 ];
 
-// ======= TESTIMONIALS =======
-const testimonials = [
-  {
-    quote: "We replaced three separate tools with this platform. Attendance fraud dropped to zero in the first month.",
-    author: "Dr. Rajesh Kumar",
-    role: "HOD, Computer Science — IIT Bhopal",
-    rating: 5,
-  },
-  {
-    quote: "Students love the AI career matching. Job placement rate improved by 34% after we onboarded this semester.",
-    author: "Prof. Anita Sharma",
-    role: "Placement Coordinator — NIT Trichy",
-    rating: 5,
-  },
-  {
-    quote: "The admin dashboard gives me live data instead of waiting for weekly reports. Game changer.",
-    author: "Mr. Vikram Singh",
-    role: "University Registrar — Amity University",
-    rating: 5,
-  },
+// ======= SYSTEM METRICS =======
+const systemCapabilities = [
+  { label: 'Role-Based Portals', value: '3', desc: 'Student, Faculty, Admin' },
+  { label: 'Normalized Database Tables', value: '40', desc: 'Relational Schema' },
+  { label: 'TOTP Window', value: '15s', desc: 'Anti-Proxy Attendance' },
+  { label: 'RAG Knowledge Layers', value: '3-Tier', desc: 'University AI Engine' },
 ];
-
-// ======= STAT COUNTER =======
-const CountUp: React.FC<{ target: number; suffix?: string; prefix?: string }> = ({ target, suffix = '', prefix = '' }) => {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const duration = 2000;
-    const step = target / (duration / 16);
-    const interval = setInterval(() => {
-      start = Math.min(start + step, target);
-      setCount(Math.floor(start));
-      if (start >= target) clearInterval(interval);
-    }, 16);
-    return () => clearInterval(interval);
-  }, [target]);
-  return <>{prefix}{count.toLocaleString()}{suffix}</>;
-};
 
 // ======= MAIN COMPONENT =======
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
@@ -174,8 +125,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </div>
           <div className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Features</a>
-            <a href="#pricing" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Pricing</a>
-            <a href="#testimonials" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Testimonials</a>
+            <a href="#portals" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Portals</a>
+            <a href="#architecture" className="text-sm text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] transition-colors">Architecture</a>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={onGetStarted}>Sign In</Button>
@@ -213,26 +164,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-up delay-200">
             <Button variant="primary" size="lg" onClick={onGetStarted} className="glow-primary min-w-44">
-              Start Free Trial <ArrowRight className="w-4 h-4" />
+              Access Ecosystem <ArrowRight className="w-4 h-4" />
             </Button>
             <Button variant="glass" size="lg" onClick={onGetStarted} className="min-w-44">
-              Live Demo <ChevronRight className="w-4 h-4" />
+              Explore Portals <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
 
-          {/* Stats bar */}
+          {/* System Capabilities Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-in-up delay-300">
-            {[
-              { label: 'Students Managed', value: 50000, suffix: '+' },
-              { label: 'Institutions', value: 120, suffix: '+' },
-              { label: 'Attendance Accuracy', value: 99, suffix: '%' },
-              { label: 'Support Uptime', value: 99.9, suffix: '%', prefix: '' },
-            ].map((s, i) => (
+            {systemCapabilities.map((s, i) => (
               <div key={i} className="glass rounded-xl p-4 text-center">
-                <p className="text-2xl font-extrabold gradient-text">
-                  <CountUp target={s.value} suffix={s.suffix} />
-                </p>
-                <p className="text-xs text-[hsl(var(--text-muted))] mt-1">{s.label}</p>
+                <p className="text-2xl font-extrabold gradient-text">{s.value}</p>
+                <p className="text-xs font-semibold text-[hsl(var(--text-primary))] mt-1">{s.label}</p>
+                <p className="text-[10px] text-[hsl(var(--text-muted))]">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -265,49 +210,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* ===== PRICING ===== */}
-      <section id="pricing" className="py-24 px-6" style={{ background: 'hsl(var(--surface-2))' }}>
+      {/* ===== PORTALS OVERVIEW ===== */}
+      <section id="portals" className="py-24 px-6" style={{ background: 'hsl(var(--surface-2))' }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="mb-4 inline-block"><Badge variant="success" size="md">Pricing</Badge></div>
+            <div className="mb-4 inline-block"><Badge variant="purple" size="md">Role-Based Ecosystem</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
-              Simple, Transparent Pricing
+              Three Unified Portals. One Platform.
             </h2>
             <p className="text-[hsl(var(--text-secondary))] max-w-xl mx-auto">
-              Start free, scale as you grow. No hidden fees, no per-user traps.
+              Tailored workspaces for students, faculty, and administrators with strict role-based access control.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            {plans.map((plan, i) => (
-              <div key={i} className={`pricing-card relative ${plan.featured ? 'scale-105' : ''}`}>
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-white text-indigo-700 text-xs font-bold px-3 py-1 rounded-full shadow-lg">{plan.badge}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {portals.map((portal, i) => (
+              <div key={i} className="pricing-card flex flex-col justify-between">
+                <div>
+                  <div className="mb-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                      {portal.badge}
+                    </span>
                   </div>
-                )}
-                <div className="mb-6">
-                  <h3 className={`text-lg font-bold mb-1 ${plan.featured ? 'text-white' : 'text-[hsl(var(--text-primary))]'}`}>{plan.name}</h3>
-                  <div className="flex items-end gap-1 mb-2">
-                    <span className={`text-4xl font-extrabold ${plan.featured ? 'text-white' : 'gradient-text'}`}>{plan.price}</span>
-                    <span className={`text-sm mb-1 ${plan.featured ? 'text-white/70' : 'text-[hsl(var(--text-muted))]'}`}>{plan.period}</span>
-                  </div>
-                  <p className={`text-sm ${plan.featured ? 'text-white/80' : 'text-[hsl(var(--text-secondary))]'}`}>{plan.desc}</p>
+                  <h3 className="text-xl font-bold text-[hsl(var(--text-primary))] mb-2">{portal.title}</h3>
+                  <p className="text-xs text-[hsl(var(--text-secondary))] leading-relaxed mb-6">{portal.desc}</p>
+                  <ul className="space-y-2.5 mb-8">
+                    {portal.features.map((feat, j) => (
+                      <li key={j} className="flex items-start gap-2.5 text-xs text-[hsl(var(--text-secondary))]">
+                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-400" />
+                        {feat}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-2.5 mb-8">
-                  {plan.features.map((feat, j) => (
-                    <li key={j} className={`flex items-start gap-2.5 text-sm ${plan.featured ? 'text-white/90' : 'text-[hsl(var(--text-secondary))]'}`}>
-                      <CheckCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${plan.featured ? 'text-white' : 'text-emerald-400'}`} />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  variant={plan.featured ? 'secondary' : 'outline'}
-                  size="md"
-                  className={`w-full ${plan.featured ? 'bg-white text-indigo-700 hover:bg-white/90' : ''}`}
-                  onClick={onGetStarted}
-                >
-                  {plan.cta}
+                <Button variant="outline" size="md" className="w-full" onClick={onGetStarted}>
+                  Sign In as {portal.role}
                 </Button>
               </div>
             ))}
@@ -315,33 +251,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* ===== TESTIMONIALS ===== */}
-      <section id="testimonials" className="py-24 px-6">
+      {/* ===== ARCHITECTURE & CAPABILITIES ===== */}
+      <section id="architecture" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="mb-4 inline-block"><Badge variant="warning" size="md">Testimonials</Badge></div>
+            <div className="mb-4 inline-block"><Badge variant="warning" size="md">Architecture & Security</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
-              Trusted by Educators
+              Enterprise Engineering Standards
             </h2>
+            <p className="text-[hsl(var(--text-secondary))] max-w-xl mx-auto text-sm">
+              Designed with zero-trust RBAC, permission-isolated AI tool execution, and anti-proxy TOTP validation.
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div key={i} className="feature-card animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-[hsl(var(--text-secondary))] leading-relaxed mb-5 italic">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {t.author.split(' ').map(p => p[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[hsl(var(--text-primary))]">{t.author}</p>
-                    <p className="text-[11px] text-[hsl(var(--text-muted))]">{t.role}</p>
-                  </div>
-                </div>
+            {[
+              { title: 'Smart Anti-Proxy TOTP', desc: '15-second dynamic rotating TOTP secrets combined with device fingerprint collisions and faculty manual override controls.' },
+              { title: 'Permission-Aware AI Tools', desc: '3-layer RAG agent architecture executing scoped internal tool wrappers that prevent cross-student data leaks.' },
+              { title: 'Multi-Tier Leave Workflows', desc: 'Configurable approval hierarchy from Faculty to HOD with automatic roll number broadcasting for manual attendance reconciliation.' },
+            ].map((arch, i) => (
+              <div key={i} className="feature-card">
+                <h3 className="font-bold text-[hsl(var(--text-primary))] mb-2 text-base">{arch.title}</h3>
+                <p className="text-xs text-[hsl(var(--text-secondary))] leading-relaxed">{arch.desc}</p>
               </div>
             ))}
           </div>
@@ -354,11 +284,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <div className="rounded-2xl p-10 text-center animate-pulse-glow"
                style={{ background: 'var(--gradient-primary)' }}>
             <Globe className="w-10 h-10 text-white/80 mx-auto mb-4" />
-            <h2 className="text-3xl font-extrabold text-white mb-4 tracking-tight">Ready to Transform Your Campus?</h2>
-            <p className="text-white/80 mb-8 max-w-lg mx-auto">Join 120+ institutions already using SmartUniv to eliminate admin chaos and empower students.</p>
+            <h2 className="text-3xl font-extrabold text-white mb-4 tracking-tight">Access SmartUniv Digital Ecosystem</h2>
+            <p className="text-white/80 mb-8 max-w-lg mx-auto">Connect through role-based portals for academic management, smart attendance, leave workflows, and AI learning support.</p>
             <Button variant="secondary" size="lg" onClick={onGetStarted}
                     className="bg-white text-indigo-700 hover:bg-white/90 font-bold shadow-xl">
-              Get Started Free Today <ArrowRight className="w-4 h-4" />
+              Launch Portal Sign In <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -373,13 +303,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
             <span className="font-bold text-[hsl(var(--text-primary))] text-sm">SmartUniv</span>
           </div>
-          <p className="text-xs text-[hsl(var(--text-muted))]">© {new Date().getFullYear()} SmartUniv Technologies. Built for Indian higher education.</p>
+          <p className="text-xs text-[hsl(var(--text-muted))]">© {new Date().getFullYear()} SmartUniv. AI-Powered Smart University Digital Ecosystem.</p>
           <div className="flex items-center gap-4 text-xs text-[hsl(var(--text-muted))]">
-            <a href="mailto:sales@smartuniv.io" className="hover:text-[hsl(var(--text-primary))] transition-colors">sales@smartuniv.io</a>
+            <a href="#" className="hover:text-[hsl(var(--text-primary))] transition-colors">Privacy Policy</a>
             <span>|</span>
-            <a href="#" className="hover:text-[hsl(var(--text-primary))] transition-colors">Privacy</a>
-            <span>|</span>
-            <a href="#" className="hover:text-[hsl(var(--text-primary))] transition-colors">Terms</a>
+            <a href="#" className="hover:text-[hsl(var(--text-primary))] transition-colors">Terms of Service</a>
           </div>
         </div>
       </footer>

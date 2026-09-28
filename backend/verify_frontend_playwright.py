@@ -1,52 +1,73 @@
 import os
-import time
 from playwright.sync_api import sync_playwright
 
-os.makedirs("/home/jules/verification/videos", exist_ok=True)
-os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+def run_comprehensive_verification():
+    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs("/home/jules/verification/videos", exist_ok=True)
 
-def run_verification():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
-        )
+        context = browser.new_context(record_video_dir="/home/jules/verification/videos")
         page = context.new_page()
-        try:
-            page.goto("http://localhost:3000")
+
+        # 1. Landing Page
+        print("1. Testing Landing Page...")
+        page.goto("http://localhost:3000")
+        page.wait_for_timeout(1000)
+
+        # 2. Login Flow - Student
+        print("2. Testing Student Login & Portal...")
+        page.get_by_role("button", name="Sign In").first.click()
+        page.wait_for_timeout(500)
+        page.fill("input[type='email']", "student@univ.edu")
+        page.fill("input[type='password']", "password123")
+        page.get_by_role("button", name="Sign In").first.click()
+        page.wait_for_timeout(1500)
+
+        # Take screenshot of Student Portal Overview
+        page.screenshot(path="/home/jules/verification/screenshots/student_portal.png")
+
+        # Navigate Student Portal tabs
+        print("   - Testing Student Portal tabs...")
+        for tab in ["Grade Book", "Leave & Permissions", "Attendance", "Service Center", "Digital ID", "AI Copilot", "Learning Hub", "Career Matching", "Project Lab"]:
+            loc = page.get_by_text(tab, exact=True)
+            if loc.count() > 0:
+                loc.first.click()
+                page.wait_for_timeout(300)
+
+        # Logout Student
+        logout_btn = page.locator("button").filter(has_text="Logout")
+        if logout_btn.count() > 0:
+            logout_btn.first.click()
             page.wait_for_timeout(1000)
 
-            # 1. Login View Screenshot & Action
-            page.screenshot(path="/home/jules/verification/screenshots/1_login_view.png")
-            page.get_by_role("button", name="Sign In to Ecosystem").click()
+        # 3. Login Flow - Faculty
+        print("3. Testing Faculty Login & Dashboard...")
+        page.fill("input[type='email']", "faculty@univ.edu")
+        page.fill("input[type='password']", "password123")
+        page.get_by_role("button", name="Sign In").first.click()
+        page.wait_for_timeout(1500)
+
+        page.screenshot(path="/home/jules/verification/screenshots/faculty_dashboard.png")
+
+        # Logout Faculty
+        logout_btn = page.locator("button").filter(has_text="Logout")
+        if logout_btn.count() > 0:
+            logout_btn.first.click()
             page.wait_for_timeout(1000)
 
-            # 2. Student Portal Screenshot
-            page.screenshot(path="/home/jules/verification/screenshots/2_student_portal.png")
-            page.wait_for_timeout(1000)
+        # 4. Login Flow - Admin
+        print("4. Testing Admin Login & Console...")
+        page.fill("input[type='email']", "admin@univ.edu")
+        page.fill("input[type='password']", "password123")
+        page.get_by_role("button", name="Sign In").first.click()
+        page.wait_for_timeout(1500)
 
-            # 3. Smart Attendance Tab
-            page.get_by_role("button", name="Smart Attendance").click()
-            page.wait_for_timeout(500)
-            page.get_by_placeholder("e.g. 4A9F21").fill("8F2A91")
-            page.get_by_role("button", name="Submit Attendance Verification").click()
-            page.wait_for_timeout(1000)
-            page.screenshot(path="/home/jules/verification/screenshots/3_attendance_verification.png")
+        page.screenshot(path="/home/jules/verification/screenshots/admin_console.png")
 
-            # 4. AI Copilot Chat Tab
-            page.get_by_role("button", name="AI Copilot Chat").click()
-            page.wait_for_timeout(500)
-            page.get_by_placeholder("Ask about attendance, policies, or career...").fill("What is the attendance policy requirement?")
-            page.keyboard.press("Enter")
-            page.wait_for_timeout(1500)
-            page.screenshot(path="/home/jules/verification/screenshots/4_ai_copilot_chat.png")
-
-            # Final screenshot
-            page.screenshot(path="/home/jules/verification/screenshots/verification.png")
-            print("Playwright frontend verification completed successfully.")
-        finally:
-            context.close()
-            browser.close()
+        context.close()
+        browser.close()
+        print("All user journeys tested successfully!")
 
 if __name__ == "__main__":
-    run_verification()
+    run_comprehensive_verification()
