@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Badge } from '../components/UIComponents';
 import {
   GraduationCap, Bot, Shield, BarChart3, Users, BookOpen, Briefcase,
-  CheckCircle, ArrowRight, Star, Zap, Building2, ChevronRight, Globe
+  CheckCircle, ArrowRight, Star, Zap, ChevronRight, Globe
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -243,7 +243,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section id="features" className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <Badge variant="info" size="md" className="mb-4">Features</Badge>
+            <div className="mb-4 inline-block"><Badge variant="info" size="md">Features</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
               Everything a University Needs
             </h2>
@@ -269,7 +269,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section id="pricing" className="py-24 px-6" style={{ background: 'hsl(var(--surface-2))' }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <Badge variant="success" size="md" className="mb-4">Pricing</Badge>
+            <div className="mb-4 inline-block"><Badge variant="success" size="md">Pricing</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
               Simple, Transparent Pricing
             </h2>
@@ -319,7 +319,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <section id="testimonials" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <Badge variant="warning" size="md" className="mb-4">Testimonials</Badge>
+            <div className="mb-4 inline-block"><Badge variant="warning" size="md">Testimonials</Badge></div>
             <h2 className="text-4xl font-extrabold text-[hsl(var(--text-primary))] mb-4 tracking-tight">
               Trusted by Educators
             </h2>

@@ -3,7 +3,7 @@ import { Card, StatCard, Badge, Button, Avatar, EmptyState, Alert, LoadingSpinne
 import { getAdminOverview, type AdminOverview } from '../api';
 import {
   Building2, Users, FileText, Activity, ShieldAlert, LogOut,
-  GraduationCap, TrendingUp, BarChart2, BookOpen, Settings,
+  GraduationCap, BarChart2, BookOpen, Settings,
   RefreshCw, Download, Eye, EyeOff,
 } from 'lucide-react';
 

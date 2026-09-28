@@ -71,3 +71,26 @@ def generate_learning_path(
         roadmap=roadmap,
         recommended_resources=resources
     )
+
+# --- Learning Tracks & Self-Learning Workflows ---
+
+@router.get("/tracks")
+def list_learning_tracks(db: Session = Depends(get_db)):
+    from app.models.all_models import LearningTrack
+    return db.query(LearningTrack).filter(LearningTrack.is_active == True).all()
+
+@router.get("/tracks/{track_id}/resources")
+def list_track_resources(track_id: int, db: Session = Depends(get_db)):
+    from app.models.all_models import LearningResource
+    return db.query(LearningResource).filter(LearningResource.track_id == track_id).order_by(LearningResource.sequence_order.asc()).all()
+
+@router.get("/progress")
+def get_student_learning_progress(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models.all_models import StudentProgress, Student
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        return []
+    return db.query(StudentProgress).filter(StudentProgress.student_id == student.id).all()

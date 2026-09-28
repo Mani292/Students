@@ -63,4 +63,43 @@ def seed_demo_accounts(db: Session) -> None:
                 designation="Head of Department" if role == UserRole.HOD else "Faculty",
             ))
 
+    # Seed Placement & Career Data
+    from app.models.all_models import Company, JobPosting, LearningTrack, LearningResource, AcademicActivity, Topic, Course
+    from datetime import datetime, timedelta
+
+    if not db.query(Company).first():
+        c1 = Company(name="TechCorp Solutions", website="https://techcorp.com", description="Leading Enterprise Cloud & AI Platform", industry="Software", location="San Francisco, CA")
+        c2 = Company(name="DataMind AI Systems", website="https://datamind.ai", description="Advanced Machine Learning & RAG Engine Lab", industry="AI / ML", location="New York, NY")
+        db.add_all([c1, c2])
+        db.flush()
+
+        jp1 = JobPosting(company_id=c1.id, title="Associate Full-Stack Software Engineer", description="Build web apps with React & Python FastAPI", min_cgpa=7.5, allowed_departments=["CSE", "ECE"], package_ctc="14 LPA", application_deadline=datetime.utcnow() + timedelta(days=30))
+        jp2 = JobPosting(company_id=c2.id, title="AI / LLM Systems Engineer", description="Develop RAG pipelines and autonomous tool calling agents", min_cgpa=8.0, allowed_departments=["CSE"], package_ctc="18 LPA", application_deadline=datetime.utcnow() + timedelta(days=45))
+        db.add_all([jp1, jp2])
+
+    if not db.query(LearningTrack).first():
+        lt1 = LearningTrack(title="Full-Stack Web Engineering", description="Master React, TypeScript, Python FastAPI and cloud deployment", category="Full-Stack", target_role="Software Engineer")
+        lt2 = LearningTrack(title="Applied AI & Autonomous Agents", description="Learn LLM orchestration, RAG architectures, and vector search", category="AI / ML", target_role="AI Engineer")
+        db.add_all([lt1, lt2])
+        db.flush()
+
+        res1 = LearningResource(track_id=lt1.id, title="React 19 & TypeScript State Architecture", resource_type="ARTICLE", url_or_content="https://react.dev", sequence_order=1)
+        res2 = LearningResource(track_id=lt1.id, title="Building High-Performance FastAPI Services", resource_type="VIDEO", url_or_content="https://fastapi.tiangolo.com", sequence_order=2)
+        db.add_all([res1, res2])
+
+    course = db.query(Course).first()
+    if not course:
+        course = Course(code="CS201", title="Data Structures & Algorithms", department_id=department.id, credits=4)
+        db.add(course)
+        db.flush()
+
+    if not db.query(Topic).first():
+        t1 = Topic(course_id=course.id, unit_number=1, title="Unit 1: Arrays & Linked Lists", description="Memory management and complexity analysis", status="COMPLETED")
+        t2 = Topic(course_id=course.id, unit_number=2, title="Unit 2: Trees & Graph Algorithms", description="DFS, BFS, Dijkstra, and Binary Search Trees", status="IN_PROGRESS")
+        db.add_all([t1, t2])
+
+    if not db.query(AcademicActivity).first():
+        act = AcademicActivity(title="Mid-Term Capstone Project Submission", description="Submit project SRS and GitHub repo link before Friday", faculty_id=1, activity_type="TASK")
+        db.add(act)
+
     db.commit()

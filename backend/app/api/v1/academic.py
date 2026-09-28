@@ -88,3 +88,58 @@ def get_my_academic_profile(
         "cgpa": student.cgpa,
         "skills": student.skills or [],
     }
+
+# --- Section 5: Topics & Academic Activities ---
+
+@router.get("/topics")
+def list_topics(course_id: int = None, db: Session = Depends(get_db)):
+    from app.models.all_models import Topic
+    query = db.query(Topic)
+    if course_id:
+        query = query.filter(Topic.course_id == course_id)
+    return query.all()
+
+@router.post("/topics")
+def create_or_update_topic(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN]))
+):
+    from app.models.all_models import Topic
+    topic = Topic(
+        course_id=payload.get("course_id", 1),
+        unit_number=payload.get("unit_number", 1),
+        title=payload.get("title", "Topic"),
+        description=payload.get("description", ""),
+        status=payload.get("status", "PLANNED")
+    )
+    db.add(topic)
+    db.commit()
+    db.refresh(topic)
+    return topic
+
+@router.get("/activities")
+def list_academic_activities(db: Session = Depends(get_db)):
+    from app.models.all_models import AcademicActivity
+    return db.query(AcademicActivity).order_by(AcademicActivity.created_at.desc()).all()
+
+@router.post("/activities")
+def create_academic_activity(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN]))
+):
+    from app.models.all_models import AcademicActivity, Faculty
+    faculty = db.query(Faculty).filter(Faculty.user_id == current_user.id).first()
+    faculty_id = faculty.id if faculty else 1
+    act = AcademicActivity(
+        title=payload.get("title", "New Announcement"),
+        description=payload.get("description", ""),
+        faculty_id=faculty_id,
+        class_id=payload.get("class_id"),
+        activity_type=payload.get("activity_type", "ANNOUNCEMENT")
+    )
+    db.add(act)
+    db.commit()
+    db.refresh(act)
+    return act

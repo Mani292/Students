@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Card, Button, Badge, StatCard, ProgressBar, Avatar,
-  Modal, EmptyState, Alert, TypingIndicator, LoadingSpinner,
+  EmptyState, Alert, TypingIndicator, LoadingSpinner,
 } from '../components/UIComponents';
 import {
   applyPermission, createService, generateLearningPath, generateProjectMentor,
@@ -13,8 +13,8 @@ import {
 import {
   LayoutDashboard, FileText, Award, Bot, BookOpen, Briefcase, Code,
   User, LogOut, Send, Bell, CheckCircle, XCircle, ChevronRight,
-  Fingerprint, Zap, Target, TrendingUp, GraduationCap, Clock, Shield,
-  Star, BookMarked, Activity,
+  Fingerprint, Zap, Target, TrendingUp, GraduationCap, Shield,
+  Star, BookMarked,
 } from 'lucide-react';
 
 interface StudentPortalProps {
@@ -53,7 +53,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
 
   // ── UI state ──
   const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const [notifPanelRef] = useState<React.RefObject<HTMLDivElement>>(React.createRef());
+  const notifPanelRef = useRef<HTMLDivElement>(null);
 
   // ── Form state ──
   const [leaveReason, setLeaveReason] = useState('');
@@ -66,7 +66,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
   // ── Attendance ──
   const [sessionToken, setSessionToken] = useState('');
   const [totpCode, setTotpCode] = useState('');
-  const [attendanceMsg, setAttendanceMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [attendanceMsg, setAttendanceMsg] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   // ── AI Chat ──
@@ -190,7 +190,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({ userEmail, token, 
       setAttendanceMsg({ type: 'success', text: '✅ Attendance recorded successfully!' });
       setSessionToken(''); setTotpCode('');
     } catch (err) {
-      setAttendanceMsg({ type: 'error', text: err instanceof Error ? err.message : 'Attendance failed' });
+      setAttendanceMsg({ type: 'danger', text: err instanceof Error ? err.message : 'Attendance failed' });
     } finally {
       setAttendanceLoading(false);
     }
