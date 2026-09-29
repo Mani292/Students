@@ -108,6 +108,8 @@ def list_applications(
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
         if student:
             query = query.filter(JobApplication.student_id == student.id)
+        else:
+            return []
     apps = query.all()
     res = []
     for a in apps:
