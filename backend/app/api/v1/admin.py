@@ -64,7 +64,6 @@ async def check_mongodb_status():
         cols = await mongo_db.list_collection_names()
         return {
             "status": "CONNECTED",
-            "cluster": "traffic-cluster.vj7wtnf.mongodb.net",
             "database": "smart_university",
             "ping": ping,
             "collections": cols
